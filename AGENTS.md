@@ -37,7 +37,8 @@ For Next.js projects, use the Next.js MCP tools when available.
 - **pkg-scripts** - List package.json scripts
 - **repo-crawl\_\*** - GitHub API repo exploration: `structure`, `readme`, `file`, `tree`, `search`
 - **repo-autopsy\_\*** - Clone & deep analyze repos locally: `clone`, `structure`, `search`, `ast`, `deps`, `hotspots`, `exports_map`, `file`, `blame`, `stats`, `secrets`, `find`, `cleanup`
-- **pdf-library\_\*** - PDF knowledge base in ~/Documents/.pdf-library/ (iCloud sync): `add`, `read`, `list`, `search`, `remove`, `tag`, `refresh`, `batch_add`, `stats`
+- **pdf-brain\_\*** - PDF knowledge base in ~/Documents/.pdf-library/ (iCloud sync): `add`, `read`, `list`, `search`, `remove`, `tag`, `batch_add`, `stats`, `check`
+- **semantic-memory\_\*** - Local vector store with configurable tool descriptions (Qdrant pattern): `store`, `find`, `list`, `stats`, `check`
 
 **Note:** Plugin tools (agentmail\_\*, beads\_\*, swarm\_\*, structured\_\*) have built-in context preservation - hard caps on inbox (limit=5, no bodies by default), auto-release reservations on session.idle.
 </tool_preferences>
