@@ -114,6 +114,45 @@
           "*": "deny"
         }
       }
+    },
+    // Security agent - read-only vulnerability scanning with Snyk
+    "security": {
+      "model": "anthropic/claude-sonnet-4-5",
+      "temperature": 0.1,  // Low temp for deterministic security analysis
+      "tools": {
+        "write": false,
+        "edit": false,
+        "patch": false
+      },
+      "description": "Security auditor - scans for vulnerabilities using Snyk tools (SCA, SAST, IaC, container). Read-only, reports findings without modification."
+    },
+    // Test writer agent - generates comprehensive test suites
+    "test-writer": {
+      "model": "anthropic/claude-sonnet-4-5",
+      "temperature": 0.2,  // Slight creativity for test case generation
+      "permission": {
+        "write": {
+          "**/*.test.ts": "allow",
+          "**/*.spec.ts": "allow",
+          "**/*.test.tsx": "allow",
+          "**/*.spec.tsx": "allow",
+          "*": "deny"
+        }
+      },
+      "description": "Test specialist - generates comprehensive unit, integration, and e2e tests. Can only write to test files."
+    },
+    // Docs agent - documentation writer (cheaper model)
+    "docs": {
+      "model": "anthropic/claude-haiku-4-5",  // Haiku for cost-effective docs
+      "temperature": 0.3,  // More creativity for readable documentation
+      "permission": {
+        "write": {
+          "**/*.md": "allow",
+          "**/*.mdx": "allow",
+          "*": "deny"
+        }
+      },
+      "description": "Documentation writer - generates and updates markdown docs, READMEs, and guides. Can only write to .md/.mdx files."
     }
   }
 }
