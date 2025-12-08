@@ -251,3 +251,21 @@ If yes (or if `--save` flag was passed):
    ```
 
 This creates a self-improving debug system - each novel error you solve makes the next occurrence instant.
+
+## When to Use /debug-plus
+
+Use `/debug-plus` instead of `/debug` when:
+
+- **Multi-file investigation** - error spans 3+ files or involves shared types
+- **Recurring patterns** - you've seen this class of error before
+- **Systemic issues** - investigation reveals missing infrastructure (error boundaries, validation, etc.)
+- **Prevention needed** - you want to fix the root cause across the codebase, not just this instance
+
+`/debug-plus` extends this command with:
+
+- Swarm integration for parallel investigation
+- Automatic prevention pattern matching via `knowledge/prevention-patterns.md`
+- Prevention bead creation for follow-up work
+- Optional swarm spawning for codebase-wide preventive fixes
+
+For simple single-file bugs, `/debug` is faster. For anything systemic, use `/debug-plus`.
