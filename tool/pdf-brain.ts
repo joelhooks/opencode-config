@@ -4,24 +4,15 @@ import { existsSync } from "fs";
 import { join, basename } from "path";
 
 /**
- * PDF Library - Local PDF knowledge base with vector search
+ * PDF Brain - Local PDF knowledge base with vector search
  *
  * Uses PGlite + pgvector for semantic search via Ollama embeddings.
  * Stores in ~/Documents/.pdf-library/ for iCloud sync.
- *
- * Requires: pdf-library CLI built and available
- * Location: ~/Code/joelhooks/pdf-library
  */
-
-const PDF_LIBRARY_CLI = join(
-  process.env.HOME || "~",
-  "Code/joelhooks/pdf-library/dist/cli.js",
-);
-const LIBRARY_DIR = join(process.env.HOME || "~", "Documents", ".pdf-library");
 
 async function runCli(args: string[]): Promise<string> {
   try {
-    const result = await $`bun ${PDF_LIBRARY_CLI} ${args}`.text();
+    const result = await $`npx pdf-brain ${args}`.text();
     return result.trim();
   } catch (e: any) {
     return `Error: ${e.stderr || e.message || e}`;
