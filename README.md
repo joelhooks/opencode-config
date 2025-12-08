@@ -121,6 +121,7 @@ The plugin learns from swarm outcomes to improve future decompositions:
 | `/parallel "t1" "t2"` | Run explicit tasks in parallel                                     |
 | `/iterate <task>`     | Evaluator-optimizer loop until quality threshold met               |
 | `/debug <error>`      | Investigate error, check known patterns first                      |
+| `/debug-plus <error>` | Debug with prevention pipeline - creates beads, spawns fix swarm   |
 | `/triage <request>`   | Classify and route to appropriate handler                          |
 | `/fix-all`            | Survey PRs + beads, dispatch agents                                |
 | `/review-my-shit`     | Pre-PR self-review                                                 |
@@ -171,6 +172,7 @@ These wrap external CLIs for OpenCode integration:
 - **nextjs-patterns.md** - RSC, caching, App Router gotchas
 - **testing-patterns.md** - Testing strategies
 - **typescript-patterns.md** - Advanced TypeScript patterns
+- **prevention-patterns.md** - Error-to-prevention mappings (15 patterns)
 
 ## MCP Servers
 
