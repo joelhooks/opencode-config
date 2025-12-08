@@ -1,34 +1,26 @@
 import { tool } from "@opencode-ai/plugin";
 import { $ } from "bun";
-import { join } from "path";
 
 /**
  * Semantic Memory - Local vector-based knowledge store
  *
- * Uses Qdrant + Ollama embeddings for semantic search.
+ * Uses PGlite + pgvector + Ollama embeddings for semantic search.
  * Configurable tool descriptions via environment variables
  * (Qdrant MCP pattern) to customize agent behavior.
- *
- * Requires: semantic-memory CLI built and available
- * Location: ~/Code/joelhooks/semantic-memory
  */
 
-const SEMANTIC_MEMORY_CLI = join(
-  process.env.HOME || "~",
-  "Code/joelhooks/semantic-memory/src/cli.ts",
-);
-
-// Configurable descriptions - allows users to customize how agents use these tools
+// Rich descriptions that shape agent behavior (Qdrant MCP pattern)
+// Can be overridden via env vars for different contexts
 const STORE_DESCRIPTION =
   process.env.TOOL_STORE_DESCRIPTION ||
-  "Store information for later semantic retrieval";
+  "Persist important discoveries, decisions, and learnings for future sessions. Use for: architectural decisions, debugging breakthroughs, user preferences, project-specific patterns. Include context about WHY something matters.";
 const FIND_DESCRIPTION =
   process.env.TOOL_FIND_DESCRIPTION ||
-  "Search for relevant information using semantic similarity";
+  "Search your persistent memory for relevant context. Query BEFORE making architectural decisions, when hitting familiar-feeling bugs, or when you need project history. Returns semantically similar memories ranked by relevance.";
 
 async function runCli(args: string[]): Promise<string> {
   try {
-    const result = await $`bun ${SEMANTIC_MEMORY_CLI} ${args}`.text();
+    const result = await $`npx semantic-memory ${args}`.text();
     return result.trim();
   } catch (e: any) {
     return `Error: ${e.stderr || e.message || e}`;
@@ -112,5 +104,16 @@ export const check = tool({
   args: {},
   async execute() {
     return runCli(["check"]);
+  },
+});
+
+export const validate = tool({
+  description:
+    "Validate/reinforce a memory to reset its decay timer. Use when you confirm a memory is still accurate and relevant. This refreshes the memory's relevance score in search results.",
+  args: {
+    id: tool.schema.string().describe("The memory ID to validate"),
+  },
+  async execute({ id }) {
+    return runCli(["validate", id]);
   },
 });
