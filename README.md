@@ -7,6 +7,7 @@ Personal OpenCode configuration for Joel Hooks. Commands, tools, agents, and kno
 ```
 ├── command/          # Custom slash commands
 ├── tool/             # Custom MCP tools
+├── plugin/           # Custom plugins (swarm orchestration)
 ├── agent/            # Specialized subagents
 ├── knowledge/        # Injected context files
 ├── opencode.jsonc    # Main config
@@ -18,6 +19,8 @@ Personal OpenCode configuration for Joel Hooks. Commands, tools, agents, and kno
 | Command               | Description                                                        |
 | --------------------- | ------------------------------------------------------------------ |
 | `/swarm <task>`       | Decompose task into beads, spawn parallel agents with context sync |
+| `/swarm-status`       | Check status of running swarm                                      |
+| `/swarm-collect`      | Collect and merge swarm results                                    |
 | `/iterate <task>`     | Evaluator-optimizer loop until quality threshold met               |
 | `/debug <error>`      | Investigate error, check known patterns first                      |
 | `/triage <request>`   | Classify and route to appropriate handler                          |
@@ -28,10 +31,16 @@ Personal OpenCode configuration for Joel Hooks. Commands, tools, agents, and kno
 | `/sweep`              | Codebase cleanup pass                                              |
 | `/focus <bead-id>`    | Start focused session on specific bead                             |
 | `/context-dump`       | Dump state for context recovery                                    |
+| `/checkpoint`         | Compress context, summarize session, preserve decisions            |
 | `/commit`             | Smart commit with conventional format                              |
 | `/pr-create`          | Create PR with beads linking                                       |
 | `/repo-dive <repo>`   | Deep analysis of GitHub repo                                       |
 | `/worktree-task <id>` | Create git worktree for isolated work                              |
+| `/retro <bead-id>`    | Post-mortem: extract learnings, update knowledge files             |
+| `/standup`            | Daily standup summary                                              |
+| `/estimate`           | Task estimation                                                    |
+| `/migrate`            | Migration helper                                                   |
+| `/test`               | Test runner with smart filtering                                   |
 
 ## Tools
 
@@ -57,8 +66,13 @@ Personal OpenCode configuration for Joel Hooks. Commands, tools, agents, and kno
 
 ## Knowledge Files
 
-- **mastra-agent-patterns.md** - Patterns from Sam Bhagwat's AI agent books
+- **effect-patterns.md** - Effect-TS services, layers, schema, error handling
 - **error-patterns.md** - Common errors with known fixes (TS, Next.js, Effect)
+- **git-patterns.md** - Git workflows, branching strategies
+- **mastra-agent-patterns.md** - Patterns from Sam Bhagwat's AI agent books
+- **nextjs-patterns.md** - RSC, caching, App Router gotchas
+- **testing-patterns.md** - Testing strategies and patterns
+- **typescript-patterns.md** - Advanced TypeScript patterns
 
 ## MCP Servers
 
