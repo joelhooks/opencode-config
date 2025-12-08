@@ -84,6 +84,28 @@ Configured in `opencode.jsonc`:
 - `context7` - Library documentation lookup
 - `fetch` - Web fetching with markdown conversion
 
+## Plugins
+
+### Swarm Plugin
+
+The `plugin/swarm.js` is a symlink to the [opencode-swarm-plugin](https://github.com/joelhooks/opencode-swarm-plugin) dist output:
+
+```
+plugin/swarm.js -> ~/Code/joelhooks/opencode-swarm-plugin/dist/plugin.js
+```
+
+Provides tools for multi-agent orchestration:
+
+- `swarm_decompose` - Generate decomposition prompt for parallelizable subtasks
+- `swarm_validate_decomposition` - Validate response against BeadTreeSchema
+- `swarm_status` - Get swarm status by epic ID
+- `swarm_progress` - Report subtask progress to coordinator
+- `swarm_complete` - Mark subtask complete, release reservations
+- `swarm_subtask_prompt` - Generate prompt for spawned subtask agent
+- `swarm_evaluation_prompt` - Generate self-evaluation prompt
+
+Also provides structured output parsing (`structured_*`) and Agent Mail integration (`agentmail_*`).
+
 ## Key Patterns
 
 ### Beads Workflow
