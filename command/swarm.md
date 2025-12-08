@@ -78,10 +78,18 @@ gh pr create
 
 **CRITICAL: Spawn ALL agents in a SINGLE message with multiple Task calls.**
 
+**Use `swarm-worker` agent type** (Sonnet 4.5 - fast and cost-effective for implementation):
+
 ```
-Task(subagent_type="general", description="Swarm: <title>", prompt="<from swarm_spawn_subtask>")
-Task(subagent_type="general", description="Swarm: <title>", prompt="<from swarm_spawn_subtask>")
+Task(subagent_type="swarm-worker", description="Swarm: <title>", prompt="<from swarm_spawn_subtask>")
+Task(subagent_type="swarm-worker", description="Swarm: <title>", prompt="<from swarm_spawn_subtask>")
 ```
+
+The swarm-worker agent is pre-configured with:
+
+- Agent Mail communication patterns
+- Beads tracking requirements
+- Quality checklist before completion
 
 ## Learning
 

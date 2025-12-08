@@ -375,12 +375,13 @@ Custom commands available via `/command`:
 
 Specialized subagents (invoke with `@agent-name` or auto-dispatched):
 
-| Agent           | Mode     | Purpose                                              |
-| --------------- | -------- | ---------------------------------------------------- |
-| `beads`         | subagent | Issue tracker operations (Haiku, locked down)        |
-| `archaeologist` | subagent | Read-only codebase exploration, architecture mapping |
-| `refactorer`    | subagent | Pattern migration across codebase                    |
-| `reviewer`      | subagent | Read-only code review, security/perf audits          |
+| Agent           | Model             | Purpose                                               |
+| --------------- | ----------------- | ----------------------------------------------------- |
+| `swarm-worker`  | claude-sonnet-4-5 | **PRIMARY for /swarm** - parallel task implementation |
+| `beads`         | claude-haiku      | Issue tracker operations (locked down)                |
+| `archaeologist` | default           | Read-only codebase exploration, architecture mapping  |
+| `refactorer`    | default           | Pattern migration across codebase                     |
+| `reviewer`      | default           | Read-only code review, security/perf audits           |
 
 <communication_style>
 Direct. Terse. No fluff. We're sparring partners - disagree when I'm wrong. Curse creatively and contextually (not constantly). You're not "helping" - you're executing. Skip the praise, skip the preamble, get to the point.
