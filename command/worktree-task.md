@@ -5,6 +5,7 @@ description: Create worktree for a bead and set up isolated workspace
 Combine git worktrees with beads for isolated parallel work.
 
 ## Usage
+
 ```
 /worktree-task <bead-id>
 /worktree-task new <description>  # Creates bead + worktree
@@ -13,11 +14,13 @@ Combine git worktrees with beads for isolated parallel work.
 ## Step 1: Get or Create Bead
 
 If bead-id provided:
+
 ```bash
 bd show $ARGUMENTS --json
 ```
 
 If "new <description>":
+
 ```bash
 bd create "<description>" -p 2 --json
 # Capture the new bead ID
@@ -39,12 +42,9 @@ bd create "<description>" -p 2 --json
 ## Step 3: Register with Agent Mail
 
 ```
-agent-mail: ensure_project(human_key="$PWD/.worktrees/$BEAD_ID")
-agent-mail: register_agent(
-  project_key="$PWD/.worktrees/$BEAD_ID",
-  program="opencode",
-  model="claude-sonnet-4",
-  task_description="Working on $BEAD_ID: <title>"
+agentmail_init(
+  project_path="$PWD/.worktrees/$BEAD_ID",
+  task="Working on $BEAD_ID: <title>"
 )
 ```
 
@@ -57,33 +57,35 @@ bd update $BEAD_ID --status in_progress
 ## Step 5: Reserve Files (Optional)
 
 If you know which files you'll touch:
+
 ```
-agent-mail: file_reservation_paths(
-  project_key="$PWD",
-  agent_name="<your-name>",
-  paths=["src/path/to/files/*"],
-  exclusive=true,
+agentmail_reserve(
+  patterns=["src/path/to/files/*"],
   reason="$BEAD_ID worktree"
 )
 ```
 
 ## Step 6: Output Workspace Info
 
-```markdown
+````markdown
 ## Worktree Ready: $BEAD_ID
 
 ### Location
+
 `cd .worktrees/$BEAD_ID`
 
 ### Bead
+
 - ID: $BEAD_ID
 - Title: <title>
 - Description: <description>
 
 ### Branch
+
 `$BEAD_ID`
 
 ### Commands
+
 ```bash
 # Enter worktree
 cd .worktrees/$BEAD_ID
@@ -95,10 +97,13 @@ pnpm run dev
 cd ../..
 ./scripts/wt rm $BEAD_ID
 ```
+````
 
 ### Next Steps
+
 [Based on bead description, suggest first action]
-```
+
+````
 
 ## Cleanup (when done)
 
@@ -112,4 +117,4 @@ bd close $BEAD_ID --reason "Merged"
 
 # Sync
 bd sync && git push
-```
+````

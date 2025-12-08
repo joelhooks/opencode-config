@@ -5,6 +5,7 @@ description: Focus on a bead - load context, mark in-progress, prepare workspace
 Start a focused work session on a specific bead.
 
 ## Usage
+
 ```
 /focus <bead-id>
 ```
@@ -30,6 +31,7 @@ bd update $BEAD_ID --status in_progress
 ## Step 3: Gather Context
 
 Based on the bead description:
+
 1. **Identify mentioned files** - paths referenced in the description
 2. **Find related code** - use Glob/Grep to find relevant files
 3. **Check dependencies** - are there blocking beads?
@@ -53,8 +55,9 @@ git log --oneline --all --grep="$BEAD_ID" | head -5 || true
 ## Step 5: Prepare Workspace
 
 If the bead involves specific files, optionally reserve them:
+
 ```
-agent-mail: file_reservation_paths(project_key="$PWD", agent_name="...", paths=[...], reason="Working on $BEAD_ID")
+agentmail_reserve(paths=[...], reason="Working on $BEAD_ID")
 ```
 
 ## Step 6: Output Focus Summary
@@ -63,15 +66,19 @@ agent-mail: file_reservation_paths(project_key="$PWD", agent_name="...", paths=[
 ## Focused on: [bead-id] - [title]
 
 ### Description
+
 [bead description]
 
 ### Key Files
+
 - [list of relevant files with brief purpose]
 
 ### Approach
+
 [suggested approach based on description and codebase analysis]
 
 ### Ready to Begin
+
 [first concrete step to take]
 ```
 

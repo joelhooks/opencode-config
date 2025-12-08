@@ -19,7 +19,7 @@ For Next.js projects, use the Next.js MCP tools when available.
 ### MCP Servers Available
 
 - **next-devtools** - Next.js dev server integration, route inspection, error diagnostics
-- **agent-mail** - Multi-agent coordination, file reservations, async messaging
+- **agent-mail** - Multi-agent coordination, file reservations, async messaging (OPTIONAL - plugin provides same functionality)
 - **chrome-devtools** - Browser automation, DOM inspection, network monitoring
 - **context7** - Library documentation lookup (`use context7` in prompts)
 - **fetch** - Web fetching with markdown conversion, pagination support
@@ -27,6 +27,10 @@ For Next.js projects, use the Next.js MCP tools when available.
 ### Custom Tools Available
 
 - **bd-quick\_\*** - Fast beads operations: `ready`, `wip`, `start`, `done`, `create`, `sync`
+- **agentmail\_\*** - Plugin tools for Agent Mail: `init`, `send`, `inbox`, `read_message`, `summarize_thread`, `reserve`, `release`, `ack`, `search`, `health`
+- **beads\_\*** - Plugin tools for beads: `create`, `create_epic`, `query`, `update`, `close`, `start`, `ready`, `sync`, `link_thread`
+- **swarm\_\*** - Swarm orchestration: `decompose`, `validate_decomposition`, `status`, `progress`, `complete`, `subtask_prompt`, `evaluation_prompt`
+- **structured\_\*** - Structured output parsing: `extract_json`, `validate`, `parse_evaluation`, `parse_decomposition`, `parse_bead_tree`
 - **typecheck** - TypeScript check with grouped errors
 - **git-context** - Branch, status, commits, ahead/behind in one call
 - **find-exports** - Find where symbols are exported
@@ -34,17 +38,19 @@ For Next.js projects, use the Next.js MCP tools when available.
 - **repo-crawl\_\*** - GitHub API repo exploration: `structure`, `readme`, `file`, `tree`, `search`
 - **repo-autopsy\_\*** - Clone & deep analyze repos locally: `clone`, `structure`, `search`, `ast`, `deps`, `hotspots`, `exports_map`, `file`, `blame`, `stats`, `secrets`, `find`, `cleanup`
 - **pdf-library\_\*** - PDF knowledge base in ~/Documents/.pdf-library/ (iCloud sync): `add`, `read`, `list`, `search`, `remove`, `tag`, `refresh`, `batch_add`, `stats`
-  </tool_preferences>
+
+**Note:** Plugin tools (agentmail\_\*, beads\_\*, swarm\_\*, structured\_\*) have built-in context preservation - hard caps on inbox (limit=5, no bodies by default), auto-release reservations on session.idle.
+</tool_preferences>
 
 <context_preservation>
 **CRITICAL: These rules prevent context exhaustion. Violating them burns tokens and kills sessions.**
 
 ### Agent Mail - MANDATORY constraints
 
-- **ALWAYS** use `include_bodies: false` on `fetch_inbox` - get headers only, fetch full body individually when needed
-- **ALWAYS** limit `inbox_limit` to 5 max (not the default 20)
-- **ALWAYS** use `summarize_thread` instead of fetching all messages in a thread
-- **NEVER** call `fetch_inbox` with `include_bodies: true` unless you need exactly ONE message body
+- **PREFER** `agentmail_inbox` plugin tool - enforces limit=5 and include_bodies=false automatically (plugin guardrails)
+- **ALWAYS** use `agentmail_summarize_thread` instead of fetching all messages in a thread
+- **ALWAYS** use `agentmail_read_message` for individual message bodies when needed
+- If using MCP tools directly: `include_bodies: false`, `inbox_limit: 5` max, `summarize_thread` over fetch all
 
 ### Documentation Tools (context7, effect-docs) - MANDATORY constraints
 
@@ -119,38 +125,34 @@ Skip Agent Mail when:
 
 ### Session Start (REQUIRED before using Agent Mail)
 
-You MUST register before using any other Agent Mail tools:
+Use the plugin tool to initialize (handles project creation + agent registration in one call):
 
 ```
-# 1. Ensure project exists (use absolute path to repo)
-ensure_project(human_key="/abs/path/to/repo")
-
-# 2. Register yourself (omit name for auto-generated adjective+noun)
-register_agent(
-  project_key="/abs/path/to/repo",
-  program="opencode",
-  model="claude-opus-4",
+agentmail_init(
+  project_path="/abs/path/to/repo",
   task_description="Working on feature X"
 )
-# Returns: { name: "BlueLake", ... } - remember this name!
+# Returns: { agent_name: "BlueLake", project_key: "..." } - remember agent_name!
 ```
 
 ### Quick Commands
 
 ```bash
-# Health check
+# Health check (or use agentmail_health tool)
 curl http://127.0.0.1:8765/health/liveness
 
 # Web UI for browsing messages
 open http://127.0.0.1:8765/mail
 ```
 
-### Key Workflows (after registration)
+### Key Workflows (after init)
 
-1. **Reserve files before edit**: `file_reservation_paths(project_key, agent_name, ["src/**"], ttl_seconds=3600, exclusive=true)`
-2. **Send message to other agents**: `send_message(project_key, sender, to, subject, body, thread_id="bd-123")`
-3. **Check inbox**: `fetch_inbox(project_key, agent_name)`
-4. **Release reservations when done**: `release_file_reservations(project_key, agent_name)`
+1. **Reserve files before edit**: `agentmail_reserve(patterns=["src/**"], ttl_seconds=3600, exclusive=true)`
+2. **Send message to other agents**: `agentmail_send(to="OtherAgent", subject="...", body="...", thread_id="bd-123")`
+3. **Check inbox**: `agentmail_inbox()` (auto-limited to 5, headers only)
+4. **Read specific message**: `agentmail_read_message(message_id="...")`
+5. **Summarize thread**: `agentmail_summarize_thread(thread_id="bd-123")`
+6. **Release reservations when done**: `agentmail_release()`
 
 ### Integration with Beads
 

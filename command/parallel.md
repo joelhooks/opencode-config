@@ -23,9 +23,10 @@ If `--file` provided, read tasks from file (one per line).
 ## Step 2: Register Coordinator & Create Branch
 
 ```
-agent-mail: ensure_project(human_key="$PWD")
-agent-mail: register_agent(project_key="$PWD", program="opencode", model="claude-sonnet-4", task_description="Parallel coordinator")
+agentmail_init with project_path="$PWD", task_description="Parallel coordinator"
 ```
+
+Remember your agent name from the response.
 
 **Create feature branch (unless --to-main):**
 
@@ -78,7 +79,7 @@ Task(
   prompt="You are a parallel worker. Coordinator: <NAME>
 
 ## Setup
-1. Register with Agent Mail
+1. Register with Agent Mail using agentmail_init tool with project_path='$PWD', task_description='<task>'
 2. Checkout the parallel branch:
    ```bash
    git fetch origin
@@ -86,7 +87,7 @@ Task(
    git pull
 ````
 
-3. Reserve files you'll touch
+3. Reserve files with agentmail_reserve tool: paths=[<files>], reason='Parallel task #1'
 
 ## Task
 
@@ -95,8 +96,8 @@ Task(
 ## On Complete
 
 - Commit and push to parallel branch (NOT main)
-- Release reservations
-- Message coordinator with summary"
+- Release reservations with agentmail_release tool
+- Message coordinator with agentmail_send tool: to=['<COORDINATOR>'], subject='Done: Task #1', body='<summary>'"
   )
 
 Task(
@@ -115,7 +116,14 @@ Wait for agents, then check inbox:
 
 ```
 
-agent-mail: fetch_inbox(project_key="$PWD", agent_name="<YOUR_NAME>", include_bodies=true)
+agentmail_inbox with limit=5
+
+```
+
+For each message, read full body if needed:
+```
+
+agentmail_read_message with message_id=<id>
 
 ````
 
@@ -136,7 +144,7 @@ gh pr create --title "feat: <parallel task summary>" --body "$(cat <<'EOF'
 <aggregate list>
 EOF
 )"
-```
+````
 
 ## Step 8: Report
 
@@ -144,19 +152,27 @@ EOF
 ## Parallel Execution Complete
 
 ### PR: #<number>
+
 ### Tasks: N total
-| # | Task | Status | Summary |
-|---|------|--------|---------|
-| 1 | <task> | ✅ | <summary from agent> |
-| 2 | <task> | ✅ | <summary> |
-| 3 | <task> | ❌ | <error> |
+
+| #   | Task   | Status | Summary              |
+| --- | ------ | ------ | -------------------- |
+| 1   | <task> | ✅     | <summary from agent> |
+| 2   | <task> | ✅     | <summary>            |
+| 3   | <task> | ❌     | <error>              |
 
 ### Failed Tasks
+
 [Details on any failures]
 
 ### Next Steps
+
 [If any tasks failed, suggest remediation]
 ```
+
+## Examples
+
+```bash
 # Fix multiple files
 /parallel "fix type errors in auth.ts" "add tests for user.service.ts" "update README"
 
@@ -166,4 +182,3 @@ EOF
 # Multi-repo (if worktrees exist)
 /parallel "update deps in .worktrees/feature-a" "update deps in .worktrees/feature-b"
 ```
-````
