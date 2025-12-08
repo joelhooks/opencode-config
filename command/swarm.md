@@ -19,7 +19,7 @@ You are a swarm coordinator. Take a complex task, break it into beads, and unlea
 Use the plugin's agent-mail tools to register:
 
 ```
-agent-mail:init with project_key=$PWD, program="opencode", model="claude-sonnet-4", task_description="Swarm coordinator: <task>"
+agentmail_init with project_key=$PWD, program="opencode", model="claude-sonnet-4", task_description="Swarm coordinator: <task>"
 ```
 
 This returns your agent name and session state. Remember it.
@@ -42,7 +42,7 @@ git push -u origin HEAD
 If given a bead-id:
 
 ```
-beads:query with id=<bead-id>
+beads_query with id=<bead-id>
 ```
 
 If given a description, analyze it to understand scope.
@@ -52,20 +52,20 @@ If given a description, analyze it to understand scope.
 Use the swarm decomposition tool to break down the task:
 
 ```
-swarm:decompose with task="<task description>", context="<relevant codebase context>"
+swarm_decompose with task="<task description>", context="<relevant codebase context>"
 ```
 
-This returns a structured decomposition with subtasks. Then create beads:
+This returns a structured decomposition with subtasks. Then create beads_
 
 ```
-beads:create_epic with title="<parent task>", subtasks=[{title, description, files, priority}...]
+beads_create_epic with title="<parent task>", subtasks=[{title, description, files, priority}...]
 ```
 
 **Decomposition rules:**
 
 - Each bead should be completable by one agent
 - Beads should be independent (parallelizable) where possible
-- If there are dependencies, use `beads:link_thread` to connect them
+- If there are dependencies, use `beads_link_thread` to connect them
 - Aim for 3-7 beads per swarm (too many = coordination overhead)
 
 ## Step 5: Reserve Files
@@ -73,7 +73,7 @@ beads:create_epic with title="<parent task>", subtasks=[{title, description, fil
 For each subtask, reserve the files it will touch:
 
 ```
-agent-mail:reserve with project_key=$PWD, agent_name=<YOUR_NAME>, paths=[<files>], reason="<bead-id>"
+agentmail_reserve with project_key=$PWD, agent_name=<YOUR_NAME>, paths=[<files>], reason="<bead-id>"
 ```
 
 **Conflict prevention:**
@@ -88,7 +88,7 @@ agent-mail:reserve with project_key=$PWD, agent_name=<YOUR_NAME>, paths=[<files>
 Use the prompt generator for each subtask:
 
 ```
-swarm:subtask_prompt with bead_id="<bead-id>", coordinator_name="<YOUR_NAME>", branch="swarm/<parent-id>", files=[<files>], sync_enabled=true
+swarm_subtask_prompt with bead_id="<bead-id>", coordinator_name="<YOUR_NAME>", branch="swarm/<parent-id>", files=[<files>], sync_enabled=true
 ```
 
 Then spawn agents with the generated prompts:
@@ -97,7 +97,7 @@ Then spawn agents with the generated prompts:
 Task(
   subagent_type="general",
   description="Swarm worker: <bead-title>",
-  prompt="<output from swarm:subtask_prompt>"
+  prompt="<output from swarm_subtask_prompt>"
 )
 ```
 
@@ -108,13 +108,13 @@ Spawn ALL agents in parallel in a single response.
 Check swarm status:
 
 ```
-swarm:status with epic_id="<parent-bead-id>"
+swarm_status with epic_id="<parent-bead-id>"
 ```
 
 Monitor inbox for progress updates:
 
 ```
-agent-mail:inbox with project_key=$PWD, agent_name=<YOUR_NAME>
+agentmail_inbox with project_key=$PWD, agent_name=<YOUR_NAME>
 ```
 
 **When you receive progress updates:**
@@ -126,7 +126,7 @@ agent-mail:inbox with project_key=$PWD, agent_name=<YOUR_NAME>
 **If you spot incompatibilities, broadcast shared context:**
 
 ```
-agent-mail:send with project_key=$PWD, sender_name=<YOUR_NAME>, to=[<agents>], subject="Coordinator Update", body_md="<guidance>", thread_id="<parent-bead-id>", importance="high"
+agentmail_send with project_key=$PWD, sender_name=<YOUR_NAME>, to=[<agents>], subject="Coordinator Update", body_md="<guidance>", thread_id="<parent-bead-id>", importance="high"
 ```
 
 ## Step 8: Collect Results
@@ -134,7 +134,7 @@ agent-mail:send with project_key=$PWD, sender_name=<YOUR_NAME>, to=[<agents>], s
 When agents complete, they send completion messages. Summarize the thread:
 
 ```
-agent-mail:summarize_thread with project_key=$PWD, thread_id="<parent-bead-id>"
+agentmail_summarize_thread with project_key=$PWD, thread_id="<parent-bead-id>"
 ```
 
 ## Step 9: Complete Swarm
@@ -142,7 +142,7 @@ agent-mail:summarize_thread with project_key=$PWD, thread_id="<parent-bead-id>"
 Use the swarm completion tool:
 
 ```
-swarm:complete with epic_id="<parent-bead-id>", summary="<what was accomplished>"
+swarm_complete with epic_id="<parent-bead-id>", summary="<what was accomplished>"
 ```
 
 This:
@@ -197,7 +197,7 @@ Report summary:
 
 If an agent fails:
 
-- Check its messages: `agent-mail:inbox`
+- Check its messages: `agentmail_inbox`
 - The bead remains in-progress
 - Manually investigate or re-spawn
 

@@ -15,7 +15,7 @@ Gather all results from a completed swarm and create a summary.
 1. **Verify completion:**
 
    ```
-   swarm:status with epic_id="<epic-id>"
+   swarm_status with epic_id="<epic-id>"
    ```
 
    All subtasks must be closed. If not, report which are still pending.
@@ -23,7 +23,7 @@ Gather all results from a completed swarm and create a summary.
 2. **Gather thread summary:**
 
    ```
-   agent-mail:summarize_thread with project_key=$PWD, thread_id="<epic-id>", include_examples=true
+   agentmail_summarize_thread with project_key=$PWD, thread_id="<epic-id>", include_examples=true
    ```
 
 3. **Check for conflicts:**
@@ -61,9 +61,9 @@ Gather all results from a completed swarm and create a summary.
    - [ ] Tests pass
    ```
 
-6. **Complete the swarm:**
+6. **Complete the swarm_**
    ```
-   swarm:complete with epic_id="<epic-id>", summary="<synthesized summary>"
+   swarm_complete with epic_id="<epic-id>", summary="<synthesized summary>"
    ```
 
 ## Output

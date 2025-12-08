@@ -15,13 +15,13 @@ Check the status of a running swarm by epic/parent bead ID.
 1. **Query bead status:**
 
    ```
-   swarm:status with epic_id="<epic-id>"
+   swarm_status with epic_id="<epic-id>"
    ```
 
 2. **Check Agent Mail thread:**
 
    ```
-   agent-mail:summarize_thread with project_key=$PWD, thread_id="<epic-id>"
+   agentmail_summarize_thread with project_key=$PWD, thread_id="<epic-id>"
    ```
 
 3. **Report:**

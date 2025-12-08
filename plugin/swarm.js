@@ -1,1 +1,1 @@
-/Users/joel/Code/joelhooks/opencode-swarm-plugin/dist/index.js
+/Users/joel/Code/joelhooks/opencode-swarm-plugin/dist/plugin.js
