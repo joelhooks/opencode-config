@@ -154,12 +154,13 @@ These wrap external CLIs for OpenCode integration:
 
 ## Agents
 
-| Agent           | Mode     | Purpose                                       |
-| --------------- | -------- | --------------------------------------------- |
-| `beads`         | subagent | Issue tracker operations (Haiku, locked down) |
-| `archaeologist` | subagent | Read-only codebase exploration                |
-| `refactorer`    | subagent | Pattern migration across codebase             |
-| `reviewer`      | subagent | Read-only code review, audits                 |
+| Agent           | Model             | Purpose                                               |
+| --------------- | ----------------- | ----------------------------------------------------- |
+| `swarm-worker`  | claude-sonnet-4-5 | **PRIMARY for /swarm** - parallel task implementation |
+| `beads`         | claude-haiku      | Issue tracker operations (locked down)                |
+| `archaeologist` | default           | Read-only codebase exploration                        |
+| `refactorer`    | default           | Pattern migration across codebase                     |
+| `reviewer`      | default           | Read-only code review, audits                         |
 
 ## Knowledge Files
 
@@ -224,10 +225,12 @@ This:
 1. Queries CASS for similar past tasks
 2. Decomposes into parallelizable subtasks
 3. Creates epic + subtasks atomically via `beads_create_epic`
-4. Spawns parallel agents with file reservations
+4. Spawns `swarm-worker` agents (Sonnet 4.5) with file reservations
 5. Agents communicate via Agent Mail threads
 6. `swarm_complete` runs UBS scan before closing
 7. `swarm_record_outcome` tracks learning signals
+
+**Why Sonnet for workers?** Cost-effective for implementation tasks. Coordinator uses default model for decomposition/orchestration.
 
 ### Context Preservation
 
