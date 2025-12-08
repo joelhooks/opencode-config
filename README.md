@@ -73,8 +73,10 @@ ln -sf ~/Code/joelhooks/opencode-swarm-plugin/dist/plugin.js ~/.config/opencode/
 **Swarm** (parallel task orchestration):
 | Tool | Purpose |
 |------|---------|
-| `swarm_decompose` | Generate decomposition prompt (queries CASS for history) |
+| `swarm_select_strategy` | Analyze task, recommend strategy (file/feature/risk-based) |
+| `swarm_plan_prompt` | Generate strategy-specific decomposition prompt (queries CASS) |
 | `swarm_validate_decomposition` | Validate response, detect instruction conflicts |
+| `swarm_spawn_subtask` | Generate prompt for worker agent with Agent Mail/beads instructions |
 | `swarm_status` | Get swarm progress by epic ID |
 | `swarm_progress` | Report subtask progress |
 | `swarm_complete` | Complete subtask (runs UBS scan, releases reservations) |
@@ -157,6 +159,7 @@ These wrap external CLIs for OpenCode integration:
 
 | Agent           | Model             | Purpose                                               |
 | --------------- | ----------------- | ----------------------------------------------------- |
+| `swarm-planner` | claude-sonnet-4-5 | Strategic task decomposition for swarm coordination   |
 | `swarm-worker`  | claude-sonnet-4-5 | **PRIMARY for /swarm** - parallel task implementation |
 | `beads`         | claude-haiku      | Issue tracker operations (locked down)                |
 | `archaeologist` | default           | Read-only codebase exploration                        |
