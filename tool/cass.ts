@@ -1,5 +1,6 @@
 import { tool } from "@opencode-ai/plugin";
 import { $ } from "bun";
+import { statSync } from "fs";
 
 /**
  * CASS - Coding Agent Session Search
@@ -62,7 +63,58 @@ export const search = tool({
     if (agent) args.push("--agent", agent);
     if (days) args.push("--days", String(days));
     if (fields) args.push("--fields", fields);
-    return runCass(args, ctx?.abort);
+
+    const output = await runCass(args, ctx?.abort);
+
+    // Parse and sort results by mtime (newest first)
+    try {
+      const lines = output.split("\n").filter((l) => l.trim());
+
+      // Try to parse as JSON lines
+      const results = lines
+        .map((line) => {
+          try {
+            return JSON.parse(line);
+          } catch {
+            return null;
+          }
+        })
+        .filter((r) => r !== null);
+
+      // If we have parseable JSON results, sort by mtime
+      if (results.length > 0) {
+        results.sort((a, b) => {
+          // Try mtime field first
+          const mtimeA = a.mtime || a.modified || 0;
+          const mtimeB = b.mtime || b.modified || 0;
+
+          if (mtimeA && mtimeB) {
+            return mtimeB - mtimeA;
+          }
+
+          // Fallback: get mtime from file path
+          if (a.path && b.path) {
+            try {
+              const statA = statSync(a.path);
+              const statB = statSync(b.path);
+              return statB.mtimeMs - statA.mtimeMs;
+            } catch {
+              // If stat fails, maintain original order
+              return 0;
+            }
+          }
+
+          return 0;
+        });
+
+        // Return sorted results as JSON lines
+        return results.map((r) => JSON.stringify(r)).join("\n");
+      }
+    } catch {
+      // If parsing fails, return original output
+    }
+
+    return output;
   },
 });
 
