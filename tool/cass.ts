@@ -12,11 +12,19 @@ import { $ } from "bun";
 
 const CASS_BIN = `${process.env.HOME}/.local/bin/cass`;
 
-async function runCass(args: string[]): Promise<string> {
+async function runCass(args: string[], signal?: AbortSignal): Promise<string> {
   try {
+    // Create AbortController for the shell command
+    const controller = new AbortController();
+    signal?.addEventListener("abort", () => controller.abort());
+
     const result = await $`${CASS_BIN} ${args}`.text();
     return result.trim();
   } catch (e: any) {
+    // Handle abort
+    if (signal?.aborted) {
+      return "Operation cancelled";
+    }
     // cass outputs errors to stderr but may still have useful stdout
     const stderr = e.stderr?.toString() || "";
     const stdout = e.stdout?.toString() || "";
@@ -48,13 +56,13 @@ export const search = tool({
         "Field selection: 'minimal' (path,line,agent), 'summary' (adds title,score), or comma-separated list",
       ),
   },
-  async execute({ query, limit, agent, days, fields }) {
+  async execute({ query, limit, agent, days, fields }, ctx) {
     const args = ["search", query, "--robot"];
     if (limit) args.push("--limit", String(limit));
     if (agent) args.push("--agent", agent);
     if (days) args.push("--days", String(days));
     if (fields) args.push("--fields", fields);
-    return runCass(args);
+    return runCass(args, ctx?.abort);
   },
 });
 
@@ -62,8 +70,8 @@ export const health = tool({
   description:
     "Check if cass index is healthy. Exit 0 = ready, Exit 1 = needs indexing. Run this before searching.",
   args: {},
-  async execute() {
-    return runCass(["health", "--json"]);
+  async execute(_args, ctx) {
+    return runCass(["health", "--json"], ctx?.abort);
   },
 });
 
@@ -76,10 +84,10 @@ export const index = tool({
       .optional()
       .describe("Force full rebuild (slower but thorough)"),
   },
-  async execute({ full }) {
+  async execute({ full }, ctx) {
     const args = ["index", "--json"];
     if (full) args.push("--full");
-    return runCass(args);
+    return runCass(args, ctx?.abort);
   },
 });
 
@@ -92,10 +100,10 @@ export const view = tool({
       .describe("Path to session file (from search results)"),
     line: tool.schema.number().optional().describe("Line number to focus on"),
   },
-  async execute({ path, line }) {
+  async execute({ path, line }, ctx) {
     const args = ["view", path, "--json"];
     if (line) args.push("-n", String(line));
-    return runCass(args);
+    return runCass(args, ctx?.abort);
   },
 });
 
@@ -110,10 +118,10 @@ export const expand = tool({
       .optional()
       .describe("Number of messages before/after (default: 3)"),
   },
-  async execute({ path, line, context }) {
+  async execute({ path, line, context }, ctx) {
     const args = ["expand", path, "-n", String(line), "--json"];
     if (context) args.push("-C", String(context));
-    return runCass(args);
+    return runCass(args, ctx?.abort);
   },
 });
 
@@ -121,8 +129,8 @@ export const stats = tool({
   description:
     "Show index statistics - how many sessions, messages, agents indexed.",
   args: {},
-  async execute() {
-    return runCass(["stats", "--json"]);
+  async execute(_args, ctx) {
+    return runCass(["stats", "--json"], ctx?.abort);
   },
 });
 
@@ -130,7 +138,7 @@ export const capabilities = tool({
   description:
     "Discover cass features, supported agents, and API capabilities.",
   args: {},
-  async execute() {
-    return runCass(["capabilities", "--json"]);
+  async execute(_args, ctx) {
+    return runCass(["capabilities", "--json"], ctx?.abort);
   },
 });

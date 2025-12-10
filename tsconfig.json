@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2015", "ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "types": ["bun-types", "@types/node"],
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["tool/**/*.ts", "plugin/**/*.ts"]
+}

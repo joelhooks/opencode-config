@@ -18,11 +18,18 @@ const FIND_DESCRIPTION =
   process.env.TOOL_FIND_DESCRIPTION ||
   "Search your persistent memory for relevant context. Query BEFORE making architectural decisions, when hitting familiar-feeling bugs, or when you need project history. Returns semantically similar memories ranked by relevance.";
 
-async function runCli(args: string[]): Promise<string> {
+async function runCli(args: string[], signal?: AbortSignal): Promise<string> {
   try {
+    // Check abort before starting
+    if (signal?.aborted) return "Operation cancelled";
+
     const result = await $`npx semantic-memory ${args}`.text();
     return result.trim();
   } catch (e: any) {
+    // Handle abort
+    if (signal?.aborted) {
+      return "Operation cancelled";
+    }
     return `Error: ${e.stderr || e.message || e}`;
   }
 }
@@ -40,12 +47,12 @@ export const store = tool({
       .optional()
       .describe("Collection name (default: 'default')"),
   },
-  async execute({ information, metadata, collection }) {
+  async execute({ information, metadata, collection }, ctx) {
     const args = ["store", information];
     if (metadata) args.push("--metadata", metadata);
     if (collection) args.push("--collection", collection);
 
-    return runCli(args);
+    return runCli(args, ctx?.abort);
   },
 });
 
@@ -66,13 +73,13 @@ export const find = tool({
       .optional()
       .describe("Use full-text search only (no embeddings)"),
   },
-  async execute({ query, limit, collection, fts }) {
+  async execute({ query, limit, collection, fts }, ctx) {
     const args = ["find", query];
     if (limit) args.push("--limit", String(limit));
     if (collection) args.push("--collection", collection);
     if (fts) args.push("--fts");
 
-    return runCli(args);
+    return runCli(args, ctx?.abort);
   },
 });
 
@@ -84,26 +91,26 @@ export const list = tool({
       .optional()
       .describe("Collection to list (default: all)"),
   },
-  async execute({ collection }) {
+  async execute({ collection }, ctx) {
     const args = ["list"];
     if (collection) args.push("--collection", collection);
-    return runCli(args);
+    return runCli(args, ctx?.abort);
   },
 });
 
 export const stats = tool({
   description: "Show memory statistics",
   args: {},
-  async execute() {
-    return runCli(["stats"]);
+  async execute(_args, ctx) {
+    return runCli(["stats"], ctx?.abort);
   },
 });
 
 export const check = tool({
   description: "Check if Ollama is ready for embeddings",
   args: {},
-  async execute() {
-    return runCli(["check"]);
+  async execute(_args, ctx) {
+    return runCli(["check"], ctx?.abort);
   },
 });
 
@@ -113,7 +120,7 @@ export const validate = tool({
   args: {
     id: tool.schema.string().describe("The memory ID to validate"),
   },
-  async execute({ id }) {
-    return runCli(["validate", id]);
+  async execute({ id }, ctx) {
+    return runCli(["validate", id], ctx?.abort);
   },
 });

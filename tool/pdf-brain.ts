@@ -16,6 +16,7 @@ const EMBEDDING_TIMEOUT_MS = 120_000; // 2min for operations that generate embed
 async function runCli(
   args: string[],
   timeoutMs = DEFAULT_TIMEOUT_MS,
+  signal?: AbortSignal,
 ): Promise<string> {
   return new Promise((resolve) => {
     // Use bunx for faster execution than npx (no registry check if cached)
@@ -34,6 +35,17 @@ async function runCli(
       resolve(`Error: Command timed out after ${timeoutMs / 1000}s`);
     }, timeoutMs);
 
+    // Handle abort signal
+    const abortListener = () => {
+      if (!killed) {
+        killed = true;
+        clearTimeout(timeout);
+        proc.kill("SIGTERM");
+        resolve("Operation cancelled");
+      }
+    };
+    signal?.addEventListener("abort", abortListener);
+
     proc.stdout.on("data", (data) => {
       stdout += data.toString();
     });
@@ -44,6 +56,7 @@ async function runCli(
 
     proc.on("close", (code) => {
       clearTimeout(timeout);
+      signal?.removeEventListener("abort", abortListener);
       if (killed) return;
 
       if (code === 0) {
@@ -55,6 +68,7 @@ async function runCli(
 
     proc.on("error", (err) => {
       clearTimeout(timeout);
+      signal?.removeEventListener("abort", abortListener);
       if (killed) return;
       resolve(`Error: ${err.message}`);
     });
@@ -72,7 +86,7 @@ export const add = tool({
       .optional()
       .describe("Custom title (default: filename)"),
   },
-  async execute({ path: pdfPath, tags, title }) {
+  async execute({ path: pdfPath, tags, title }, ctx) {
     // Resolve path
     const resolvedPath = pdfPath.startsWith("~")
       ? pdfPath.replace("~", process.env.HOME || "")
@@ -93,7 +107,7 @@ export const add = tool({
     if (title) args.push("--title", title);
 
     // Embedding generation can be slow
-    return runCli(args, EMBEDDING_TIMEOUT_MS);
+    return runCli(args, EMBEDDING_TIMEOUT_MS, ctx?.abort);
   },
 });
 
@@ -112,14 +126,14 @@ export const search = tool({
       .optional()
       .describe("Use full-text search only (no embeddings)"),
   },
-  async execute({ query, limit, tag, fts }) {
+  async execute({ query, limit, tag, fts }, ctx) {
     const args = ["search", query];
     if (limit) args.push("--limit", String(limit));
     if (tag) args.push("--tag", tag);
     if (fts) args.push("--fts");
 
     // Vector search needs Ollama for query embedding (unless fts-only)
-    return runCli(args, fts ? DEFAULT_TIMEOUT_MS : 60_000);
+    return runCli(args, fts ? DEFAULT_TIMEOUT_MS : 60_000, ctx?.abort);
   },
 });
 
@@ -128,8 +142,8 @@ export const read = tool({
   args: {
     query: tool.schema.string().describe("PDF ID or title"),
   },
-  async execute({ query }) {
-    return runCli(["get", query]);
+  async execute({ query }, ctx) {
+    return runCli(["get", query], DEFAULT_TIMEOUT_MS, ctx?.abort);
   },
 });
 
@@ -138,10 +152,10 @@ export const list = tool({
   args: {
     tag: tool.schema.string().optional().describe("Filter by tag"),
   },
-  async execute({ tag }) {
+  async execute({ tag }, ctx) {
     const args = ["list"];
     if (tag) args.push("--tag", tag);
-    return runCli(args);
+    return runCli(args, DEFAULT_TIMEOUT_MS, ctx?.abort);
   },
 });
 
@@ -150,8 +164,8 @@ export const remove = tool({
   args: {
     query: tool.schema.string().describe("PDF ID or title to remove"),
   },
-  async execute({ query }) {
-    return runCli(["remove", query]);
+  async execute({ query }, ctx) {
+    return runCli(["remove", query], DEFAULT_TIMEOUT_MS, ctx?.abort);
   },
 });
 
@@ -161,24 +175,24 @@ export const tag = tool({
     query: tool.schema.string().describe("PDF ID or title"),
     tags: tool.schema.string().describe("Comma-separated tags to set"),
   },
-  async execute({ query, tags }) {
-    return runCli(["tag", query, tags]);
+  async execute({ query, tags }, ctx) {
+    return runCli(["tag", query, tags], DEFAULT_TIMEOUT_MS, ctx?.abort);
   },
 });
 
 export const stats = tool({
   description: "Show library statistics (documents, chunks, embeddings)",
   args: {},
-  async execute() {
-    return runCli(["stats"]);
+  async execute(_args, ctx) {
+    return runCli(["stats"], DEFAULT_TIMEOUT_MS, ctx?.abort);
   },
 });
 
 export const check = tool({
   description: "Check if Ollama is ready for embedding generation",
   args: {},
-  async execute() {
-    return runCli(["check"]);
+  async execute(_args, ctx) {
+    return runCli(["check"], DEFAULT_TIMEOUT_MS, ctx?.abort);
   },
 });
 
@@ -192,7 +206,7 @@ export const batch_add = tool({
       .optional()
       .describe("Search subdirectories"),
   },
-  async execute({ dir, tags, recursive = false }) {
+  async execute({ dir, tags, recursive = false }, ctx) {
     const resolvedDir = dir.startsWith("~")
       ? dir.replace("~", process.env.HOME || "")
       : dir.startsWith("/")
@@ -231,12 +245,18 @@ export const batch_add = tool({
     const results: string[] = [];
 
     for (const pdfPath of pdfList) {
+      // Check for abort between iterations
+      if (ctx?.abort?.aborted) {
+        results.push("\n\nOperation cancelled - remaining PDFs not processed");
+        break;
+      }
+
       const title = basename(pdfPath, ".pdf");
       try {
         const args = ["add", pdfPath];
         if (tags) args.push("--tags", tags);
 
-        const result = await runCli(args, EMBEDDING_TIMEOUT_MS);
+        const result = await runCli(args, EMBEDDING_TIMEOUT_MS, ctx?.abort);
         if (result.includes("✓") || result.includes("Already")) {
           results.push(`✓ ${title}`);
         } else {
