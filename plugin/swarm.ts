@@ -122,6 +122,92 @@ async function execTool(
 }
 
 // =============================================================================
+// Doom Loop Detection
+// =============================================================================
+
+/**
+ * Threshold for detecting identical repeated tool calls.
+ * If the same tool+args combination is called this many times within a session,
+ * it's considered a doom loop.
+ */
+const DOOM_LOOP_THRESHOLD = 3;
+
+/**
+ * Maximum number of recent tool calls to track per session.
+ * Keeps memory bounded by dropping oldest calls.
+ */
+const DOOM_LOOP_HISTORY_SIZE = 10;
+
+/**
+ * Tool call record for doom loop detection.
+ */
+interface ToolCallRecord {
+  /** Tool name */
+  tool: string;
+  /** Serialized arguments */
+  args: string;
+  /** Number of times this exact call was made */
+  count: number;
+}
+
+/**
+ * Recent tool calls tracked per session ID.
+ * Maps sessionID -> array of recent tool calls (FIFO, max DOOM_LOOP_HISTORY_SIZE).
+ */
+const recentCalls: Map<string, ToolCallRecord[]> = new Map();
+
+/**
+ * Check if an agent is stuck in a doom loop (repeatedly calling same tool with same args).
+ *
+ * Tracks the last N tool calls per session and detects when the same tool+args
+ * combination is called DOOM_LOOP_THRESHOLD times or more.
+ *
+ * This prevents agents from burning tokens on infinite retries of failing operations.
+ * Inspired by OpenCode's doom loop detection.
+ *
+ * @param sessionID - The session identifier (from OPENCODE_SESSION_ID)
+ * @param tool - The tool name being called
+ * @param args - The tool arguments
+ * @returns true if doom loop detected, false otherwise
+ *
+ * @example
+ * ```typescript
+ * if (checkDoomLoop(ctx.sessionID, "beads_update", { id: "bd-123", status: "open" })) {
+ *   throw new Error("Doom loop detected: same tool call repeated 3+ times");
+ * }
+ * ```
+ */
+export function checkDoomLoop(
+  sessionID: string,
+  tool: string,
+  args: any,
+): boolean {
+  // Create unique key for this tool+args combination
+  const key = `${tool}:${JSON.stringify(args)}`;
+
+  // Get or initialize call history for this session
+  const calls = recentCalls.get(sessionID) || [];
+
+  // Count matching calls in recent history
+  const matching = calls.filter((c) => `${c.tool}:${c.args}` === key);
+
+  if (matching.length >= DOOM_LOOP_THRESHOLD) {
+    return true; // Doom loop detected
+  }
+
+  // Record this call
+  calls.push({ tool, args: JSON.stringify(args), count: 1 });
+
+  // Keep only last N calls (FIFO)
+  if (calls.length > DOOM_LOOP_HISTORY_SIZE) {
+    calls.shift();
+  }
+
+  recentCalls.set(sessionID, calls);
+  return false;
+}
+
+// =============================================================================
 // Beads Tools
 // =============================================================================
 
