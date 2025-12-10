@@ -380,8 +380,8 @@ Specialized subagents (invoke with `@agent-name` or auto-dispatched):
 
 | Agent           | Model             | Purpose                                               |
 | --------------- | ----------------- | ----------------------------------------------------- |
-| `swarm-planner` | claude-sonnet-4-5 | Strategic task decomposition for swarm coordination   |
-| `swarm-worker`  | claude-sonnet-4-5 | **PRIMARY for /swarm** - parallel task implementation |
+| `swarm/planner` | claude-sonnet-4-5 | Strategic task decomposition for swarm coordination   |
+| `swarm/worker`  | claude-sonnet-4-5 | **PRIMARY for /swarm** - parallel task implementation |
 | `beads`         | claude-haiku      | Issue tracker operations (locked down)                |
 | `archaeologist` | default           | Read-only codebase exploration, architecture mapping  |
 | `refactorer`    | default           | Pattern migration across codebase                     |

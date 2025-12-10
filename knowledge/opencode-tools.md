@@ -838,10 +838,115 @@ ToolRegistry.state(async () => {
 6. **All tools** → Add abort signal handling
 7. **All tools** → Add output size limits with truncation
 
+## Streaming Metadata API
+
+### Availability for Plugins
+
+**Status: NOT AVAILABLE** ❌
+
+The `ctx.metadata()` streaming API is **only available to OpenCode's built-in tools**, not to plugin tools.
+
+### Evidence
+
+1. **Plugin ToolContext type** (`@opencode-ai/plugin/dist/tool.d.ts`):
+
+   ```typescript
+   export type ToolContext = {
+     sessionID: string;
+     messageID: string;
+     agent: string;
+     abort: AbortSignal;
+   };
+   ```
+
+   No `metadata` method.
+
+2. **Built-in tools use extended context**:
+   Built-in tools (Bash, Task) use `ctx.metadata()` with an internal context type that extends the public `ToolContext` interface.
+
+   Example from Bash tool (line 298):
+
+   ```typescript
+   ctx.metadata({ metadata: { output: "", description } });
+   const append = (chunk: Buffer) => {
+     output += chunk.toString();
+     ctx.metadata({ metadata: { output, description } });
+   };
+   ```
+
+   Example from Task tool (line 479):
+
+   ```typescript
+   ctx.metadata({ metadata: { summary: Object.values(parts) } });
+   ```
+
+3. **Internal context type** (from opencode-tools.md line 22-34):
+   ```typescript
+   type Context = {
+     sessionID: string;
+     messageID: string;
+     agent: string;
+     abort: AbortSignal;
+     callID?: string;
+     extra?: Record<string, any>;
+     metadata(input): void; // ← Only in internal context
+   };
+   ```
+
+### Limitation Impact
+
+**What we can't do in plugins:**
+
+- Real-time progress updates during long operations
+- Stream incremental output before tool completes
+- Show live status during multi-step processes
+
+**Workarounds:**
+
+1. **Return progress in final output** - accumulate status and return comprehensive summary
+2. **Use Agent Mail for coordination** - send progress messages to other agents
+3. **Use beads_update** - update bead descriptions with progress checkpoints
+
+### Example: How Built-in Tools Use It
+
+**Bash tool** (streaming command output):
+
+```typescript
+// Initialize with empty output
+ctx.metadata({ metadata: { output: "", description } });
+
+// Stream chunks as they arrive
+proc.stdout?.on("data", (chunk) => {
+  output += chunk.toString();
+  ctx.metadata({ metadata: { output, description } });
+});
+```
+
+**Task tool** (streaming subtask progress):
+
+```typescript
+const parts = {};
+Bus.subscribe(MessageV2.Event.PartUpdated, async (evt) => {
+  parts[part.id] = { id, tool, state };
+  ctx.metadata({ metadata: { summary: Object.values(parts) } });
+});
+```
+
+### Feature Request?
+
+If streaming metadata becomes critical for plugin tools, this would need to be added to the `@opencode-ai/plugin` package by the OpenCode team. The plugin would need:
+
+1. Extended `ToolContext` type with `metadata()` method
+2. Infrastructure to handle streaming updates from plugin processes
+3. UI support for displaying streaming metadata from plugins
+
+Currently, plugin tools are limited to returning a single string result at completion.
+
 ### Next Steps
 
 - Implement `Tool.define()` wrapper for our custom tools
 - Add FileTime-like tracking for beads state
 - Create Permission patterns for Agent Mail reservations
-- Add streaming progress to swarm operations
+- ~~Add streaming progress to swarm operations~~ (NOT POSSIBLE - no ctx.metadata)
 - Implement mtime-based sorting in cass search results
+- **Workaround**: Use Agent Mail for progress reporting in swarm tools

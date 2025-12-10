@@ -200,7 +200,7 @@ Example:
 
 ```markdown
 ---
-agent: swarm-planner
+agent: swarm/planner
 description: Decompose task into parallel beads
 ---
 

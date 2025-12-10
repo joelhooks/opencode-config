@@ -14,7 +14,7 @@ $ARGUMENTS
 2. **Decompose**: Use `swarm_select_strategy` then `swarm_plan_prompt` to break down the task
 3. **Create beads**: `beads_create_epic` with subtasks and file assignments
 4. **Reserve files**: `agentmail_reserve` for each subtask's files
-5. **Spawn agents**: Use Task tool with `swarm_spawn_subtask` prompts (or use @swarm-worker for sequential/single-file tasks)
+5. **Spawn agents**: Use Task tool with `swarm_spawn_subtask` prompts (or use @swarm/worker for sequential/single-file tasks)
 6. **Monitor**: Check `agentmail_inbox` for progress, use `agentmail_summarize_thread` for overview
 7. **Complete**: `swarm_complete` when done, then `beads_sync` to push
 

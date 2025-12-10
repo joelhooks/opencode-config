@@ -1,5 +1,5 @@
 ---
-name: swarm-planner
+name: swarm/planner
 description: Strategic task decomposition for swarm coordination
 model: anthropic/claude-opus-4-5
 ---

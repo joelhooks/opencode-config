@@ -259,11 +259,12 @@ From context analysis, OpenCode has features we might not be using:
 ## Implementation Order
 
 ```
-Week 1:
+Week 1: ✅ COMPLETE
   [x] Doom loop detection (swarm plugin)
-  [ ] Abort signal handling (all tools)
-  [ ] Output size limits (wrapper)
-  [ ] Explore agent (new file)
+  [x] Abort signal handling (all tools)
+  [x] Output size limits (tool-utils.ts)
+  [x] Explore agent (agent/explore.md)
+  [x] Repo tooling optimizations (caching, parallel, GitHub token)
 
 Week 2:
   [ ] Nested agent directories (reorganize)

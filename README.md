@@ -159,8 +159,8 @@ These wrap external CLIs for OpenCode integration:
 
 | Agent           | Model             | Purpose                                               |
 | --------------- | ----------------- | ----------------------------------------------------- |
-| `swarm-planner` | claude-sonnet-4-5 | Strategic task decomposition for swarm coordination   |
-| `swarm-worker`  | claude-sonnet-4-5 | **PRIMARY for /swarm** - parallel task implementation |
+| `swarm/planner` | claude-sonnet-4-5 | Strategic task decomposition for swarm coordination   |
+| `swarm/worker`  | claude-sonnet-4-5 | **PRIMARY for /swarm** - parallel task implementation |
 | `beads`         | claude-haiku      | Issue tracker operations (locked down)                |
 | `archaeologist` | default           | Read-only codebase exploration                        |
 | `refactorer`    | default           | Pattern migration across codebase                     |
@@ -230,7 +230,7 @@ This:
 1. Queries CASS for similar past tasks
 2. Decomposes into parallelizable subtasks
 3. Creates epic + subtasks atomically via `beads_create_epic`
-4. Spawns `swarm-worker` agents (Sonnet 4.5) with file reservations
+4. Spawns `swarm/worker` agents (Sonnet 4.5) with file reservations
 5. Agents communicate via Agent Mail threads
 6. `swarm_complete` runs UBS scan before closing
 7. `swarm_record_outcome` tracks learning signals

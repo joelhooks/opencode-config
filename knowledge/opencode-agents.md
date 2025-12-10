@@ -184,8 +184,8 @@ permission: {
 
 | Agent             | Mode       | Model             | Tool Restrictions                                                                  |
 | ----------------- | ---------- | ----------------- | ---------------------------------------------------------------------------------- |
-| **swarm-worker**  | `subagent` | claude-sonnet-4-5 | _(none specified - inherits default)_                                              |
-| **swarm-planner** | `subagent` | claude-opus-4-5   | _(none specified)_                                                                 |
+| **swarm/worker**  | `subagent` | claude-sonnet-4-5 | _(none specified - inherits default)_                                              |
+| **swarm/planner** | `subagent` | claude-opus-4-5   | _(none specified)_                                                                 |
 | **archaeologist** | `subagent` | claude-sonnet-4-5 | **Read-only**: write/edit false, limited bash (rg, git log/show/blame, tree, find) |
 
 ## 5. Response Processing
@@ -297,7 +297,7 @@ permission:
 | **Tool restrictions** | Boolean map + permission patterns | Boolean map + bash patterns                    |
 | **Result passing**    | Manual text summary               | Structured swarm_complete                      |
 | **Learning**          | None                              | Outcome tracking + pattern maturity            |
-| **Built-in agents**   | 4 (general, explore, build, plan) | 3 (swarm-worker, swarm-planner, archaeologist) |
+| **Built-in agents**   | 4 (general, explore, build, plan) | 3 (swarm/worker, swarm/planner, archaeologist) |
 
 ## 8. Implementation Insights
 

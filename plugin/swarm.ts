@@ -208,6 +208,99 @@ export function checkDoomLoop(
 }
 
 // =============================================================================
+// Bead FileTime Tracking
+// =============================================================================
+
+/**
+ * Tracks when beads were last read per session to detect stale overwrites.
+ * Maps sessionID -> beadID -> last read timestamp.
+ *
+ * Inspired by OpenCode's FileTime tracking which prevents agents from
+ * editing files they haven't read in the current session.
+ *
+ * @example
+ * ```typescript
+ * // After reading a bead from disk or API
+ * recordBeadRead(sessionID, "bd-123");
+ *
+ * // Before modifying a bead
+ * assertBeadFresh(sessionID, "bd-123", beadLastModifiedDate);
+ * // Throws if bead was modified after last read
+ * ```
+ */
+const beadReadTimes: Map<string, Map<string, Date>> = new Map();
+
+/**
+ * Record that a bead was read in a session.
+ *
+ * Call this after reading a bead from disk or API to establish a baseline
+ * for staleness detection. The read timestamp is used by assertBeadFresh
+ * to detect if the bead was modified externally since the read.
+ *
+ * @param sessionID - The session identifier (from OPENCODE_SESSION_ID)
+ * @param beadID - The bead ID (e.g., "bd-123")
+ *
+ * @example
+ * ```typescript
+ * // After loading bead from issues.jsonl
+ * const bead = loadBead("bd-123");
+ * recordBeadRead(ctx.sessionID, bead.id);
+ * ```
+ */
+export function recordBeadRead(sessionID: string, beadID: string): void {
+  if (!beadReadTimes.has(sessionID)) {
+    beadReadTimes.set(sessionID, new Map());
+  }
+  beadReadTimes.get(sessionID)!.set(beadID, new Date());
+}
+
+/**
+ * Assert that a bead has been read and is not stale.
+ *
+ * Throws an error if:
+ * - The bead has not been read in this session (recordBeadRead not called)
+ * - The bead was modified externally after the last read (stale data)
+ *
+ * This prevents the "lost update" problem where multiple agents or sessions
+ * modify the same bead, overwriting each other's changes.
+ *
+ * @param sessionID - The session identifier (from OPENCODE_SESSION_ID)
+ * @param beadID - The bead ID (e.g., "bd-123")
+ * @param lastModified - When the bead was last modified (from bead metadata)
+ * @throws {Error} If bead not read or stale
+ *
+ * @example
+ * ```typescript
+ * // Before updating bead status
+ * const bead = loadBead("bd-123");
+ * assertBeadFresh(ctx.sessionID, bead.id, bead.modified);
+ * // Safe to modify - we have fresh data
+ * bead.status = "closed";
+ * saveBead(bead);
+ * ```
+ */
+export function assertBeadFresh(
+  sessionID: string,
+  beadID: string,
+  lastModified: Date,
+): void {
+  const readTime = beadReadTimes.get(sessionID)?.get(beadID);
+
+  if (!readTime) {
+    throw new Error(
+      `Must read bead ${beadID} before modifying. Call recordBeadRead() first.`,
+    );
+  }
+
+  if (lastModified > readTime) {
+    throw new Error(
+      `Bead ${beadID} was modified externally at ${lastModified.toISOString()} ` +
+        `(last read at ${readTime.toISOString()}). Re-read before modifying.`,
+    );
+  }
+}
+
+// =============================================================================
 // Beads Tools
 // =============================================================================
 
