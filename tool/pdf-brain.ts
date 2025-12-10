@@ -1,7 +1,7 @@
 import { tool } from "@opencode-ai/plugin";
-import { $ } from "bun";
 import { existsSync } from "fs";
 import { join, basename } from "path";
+import { spawn } from "child_process";
 
 /**
  * PDF Brain - Local PDF knowledge base with vector search
@@ -10,13 +10,55 @@ import { join, basename } from "path";
  * Stores in ~/Documents/.pdf-library/ for iCloud sync.
  */
 
-async function runCli(args: string[]): Promise<string> {
-  try {
-    const result = await $`npx pdf-brain ${args}`.text();
-    return result.trim();
-  } catch (e: any) {
-    return `Error: ${e.stderr || e.message || e}`;
-  }
+const DEFAULT_TIMEOUT_MS = 30_000; // 30s default
+const EMBEDDING_TIMEOUT_MS = 120_000; // 2min for operations that generate embeddings
+
+async function runCli(
+  args: string[],
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<string> {
+  return new Promise((resolve) => {
+    // Use bunx for faster execution than npx (no registry check if cached)
+    const proc = spawn("bunx", ["pdf-brain", ...args], {
+      env: { ...process.env },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let stdout = "";
+    let stderr = "";
+    let killed = false;
+
+    const timeout = setTimeout(() => {
+      killed = true;
+      proc.kill("SIGTERM");
+      resolve(`Error: Command timed out after ${timeoutMs / 1000}s`);
+    }, timeoutMs);
+
+    proc.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+
+    proc.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
+
+    proc.on("close", (code) => {
+      clearTimeout(timeout);
+      if (killed) return;
+
+      if (code === 0) {
+        resolve(stdout.trim());
+      } else {
+        resolve(`Error (exit ${code}): ${stderr || stdout}`.trim());
+      }
+    });
+
+    proc.on("error", (err) => {
+      clearTimeout(timeout);
+      if (killed) return;
+      resolve(`Error: ${err.message}`);
+    });
+  });
 }
 
 export const add = tool({
@@ -50,7 +92,8 @@ export const add = tool({
     if (tags) args.push("--tags", tags);
     if (title) args.push("--title", title);
 
-    return runCli(args);
+    // Embedding generation can be slow
+    return runCli(args, EMBEDDING_TIMEOUT_MS);
   },
 });
 
@@ -75,7 +118,8 @@ export const search = tool({
     if (tag) args.push("--tag", tag);
     if (fts) args.push("--fts");
 
-    return runCli(args);
+    // Vector search needs Ollama for query embedding (unless fts-only)
+    return runCli(args, fts ? DEFAULT_TIMEOUT_MS : 60_000);
   },
 });
 
@@ -160,10 +204,25 @@ export const batch_add = tool({
     }
 
     // Find PDFs
-    const depthArg = recursive ? "" : "-maxdepth 1";
-    const pdfs =
-      await $`find ${resolvedDir} ${depthArg} -name "*.pdf" -o -name "*.PDF" 2>/dev/null`.text();
-    const pdfList = pdfs.trim().split("\n").filter(Boolean);
+    const { readdirSync, statSync } = await import("fs");
+
+    function findPdfs(dir: string, recurse: boolean): string[] {
+      const results: string[] = [];
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const fullPath = join(dir, entry.name);
+        if (entry.isDirectory() && recurse) {
+          results.push(...findPdfs(fullPath, true));
+        } else if (
+          entry.isFile() &&
+          entry.name.toLowerCase().endsWith(".pdf")
+        ) {
+          results.push(fullPath);
+        }
+      }
+      return results;
+    }
+
+    const pdfList = findPdfs(resolvedDir, recursive);
 
     if (pdfList.length === 0) {
       return `No PDFs found in ${resolvedDir}`;
@@ -177,7 +236,7 @@ export const batch_add = tool({
         const args = ["add", pdfPath];
         if (tags) args.push("--tags", tags);
 
-        const result = await runCli(args);
+        const result = await runCli(args, EMBEDDING_TIMEOUT_MS);
         if (result.includes("✓") || result.includes("Already")) {
           results.push(`✓ ${title}`);
         } else {

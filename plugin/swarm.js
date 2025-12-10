@@ -1,1 +1,0 @@
-/Users/joel/Code/joelhooks/opencode-swarm-plugin/dist/plugin.js

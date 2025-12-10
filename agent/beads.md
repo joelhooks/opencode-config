@@ -1,7 +1,7 @@
 ---
 description: Manages beads issue tracker - file, update, close, query issues. Use for all issue tracking operations.
 mode: subagent
-model: anthropic/claude-haiku-4-5
+model: anthropic/claude-sonnet-4-5
 temperature: 0.1
 tools:
   bash: true
@@ -128,12 +128,14 @@ bd sync && git push && git status
 ## Common Workflows
 
 ### Start of Session
+
 ```bash
 bd ready --json | jq '.[0]'
 bd list --status in_progress --json
 ```
 
 ### Found a Bug While Working
+
 ```bash
 # 1. Create the bug
 bd create "Found XSS vulnerability in auth" -t bug -p 0 --json
@@ -144,6 +146,7 @@ bd dep add bd-f14c bd-a1b2 --type discovered-from
 ```
 
 ### Decompose Feature into Epic
+
 ```bash
 # 1. Create epic
 bd create "Auth System Overhaul" -t epic -p 1 --json
@@ -157,6 +160,7 @@ bd create "Write integration tests" -p 2 --json   # bd-a3f8.4
 ```
 
 ### End of Session (Land the Plane)
+
 ```bash
 # 1. Close completed work
 bd close bd-a1b2 --reason "Implemented and tested" --json
@@ -183,17 +187,20 @@ bd ready --json | jq '.[0]'
 ## Error Recovery
 
 ### "no database found"
+
 ```bash
 bd init --quiet
 ```
 
 ### "issue not found"
+
 ```bash
 # Check what exists
 bd list --json | jq '.[].id'
 ```
 
 ### "JSONL conflict after git pull"
+
 ```bash
 git checkout --theirs .beads/beads.jsonl
 bd import -i .beads/beads.jsonl
@@ -201,6 +208,7 @@ bd sync
 ```
 
 ### "daemon not responding"
+
 ```bash
 bd --no-daemon ready --json
 # Or restart daemon
