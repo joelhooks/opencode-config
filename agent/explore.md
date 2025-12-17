@@ -1,7 +1,7 @@
 ---
 description: Fast codebase exploration - read-only, no modifications. Optimized for quick searches and pattern discovery.
 mode: subagent
-model: anthropic/claude-haiku
+model: anthropic/claude-haiku-4-5
 temperature: 0.1
 tools:
   bash: true

@@ -41,6 +41,8 @@
     "external_directory": "allow",
     // Only deny the truly catastrophic - everything else just runs
     "bash": {
+      "git push": "ask",  // Confirm before pushing (prevent wrong branch accidents)
+      "git push *": "ask",
       "sudo *": "deny",
       "rm -rf /": "deny",
       "rm -rf /*": "deny",

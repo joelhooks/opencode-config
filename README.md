@@ -1,271 +1,373 @@
-# OpenCode Config
+```
+   ██████╗ ██████╗ ███████╗███╗   ██╗ ██████╗ ██████╗ ██████╗ ███████╗
+  ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██╔════╝██╔═══██╗██╔══██╗██╔════╝
+  ██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║     ██║   ██║██║  ██║█████╗
+  ██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║██║     ██║   ██║██║  ██║██╔══╝
+  ╚██████╔╝██║     ███████╗██║ ╚████║╚██████╗╚██████╔╝██████╔╝███████╗
+   ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝
 
-Personal OpenCode configuration for Joel Hooks. Swarm-first multi-agent orchestration with learning capabilities.
+        ██████╗ ██████╗ ███╗   ██╗███████╗██╗ ██████╗
+       ██╔════╝██╔═══██╗████╗  ██║██╔════╝██║██╔════╝
+       ██║     ██║   ██║██╔██╗ ██║█████╗  ██║██║  ███╗
+       ██║     ██║   ██║██║╚██╗██║██╔══╝  ██║██║   ██║
+       ╚██████╗╚██████╔╝██║ ╚████║██║     ██║╚██████╔╝
+        ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝     ╚═╝ ╚═════╝
+```
+
+Personal OpenCode configuration for **Joel Hooks**. Swarm-first multi-agent orchestration with learning capabilities.
+
+## Credits
+
+Inspired by and borrowed from:
+
+- **[nexxeln/opencode-config](https://github.com/nexxeln/opencode-config)** - `/rmslop` command, notify plugin pattern, Effect-TS knowledge patterns
+- **[OpenCode](https://opencode.ai)** - The foundation that makes this possible
+
+---
 
 ## Quick Start
 
 ```bash
-# Install the swarm plugin from npm
-npm install opencode-swarm-plugin
+# Clone this config
+git clone https://github.com/joelhooks/opencode-config ~/.config/opencode
 
-# Copy to OpenCode plugins directory
-cp node_modules/opencode-swarm-plugin/dist/plugin.js ~/.config/opencode/plugin/swarm.js
+# Install dependencies
+cd ~/.config/opencode && pnpm install
 
-# Verify Agent Mail is running (required for multi-agent coordination)
-curl http://127.0.0.1:8765/health/liveness
+# Install the swarm CLI globally
+npm install -g opencode-swarm-plugin
 
-# Verify beads CLI is installed
-bd --version
+# Verify setup
+swarm --version
 ```
+
+---
 
 ## Structure
 
 ```
-├── command/          # Custom slash commands
-├── tool/             # Custom MCP tools (wrappers)
-├── plugin/           # Swarm plugin (from npm)
-├── agent/            # Specialized subagents
-├── knowledge/        # Injected context files
-├── opencode.jsonc    # Main config
-└── AGENTS.md         # Workflow instructions
+┌─────────────────────────────────────────────────────────────────┐
+│                        ~/.config/opencode                        │
+├─────────────────────────────────────────────────────────────────┤
+│  command/           25 slash commands (/swarm, /debug, etc.)    │
+│  tool/              12 custom MCP tools (cass, ubs, etc.)       │
+│  plugin/            swarm.ts (orchestration), notify.ts (audio) │
+│  agent/             specialized subagents (worker, planner...)  │
+│  knowledge/         8 context files (effect, nextjs, testing)   │
+│  skills/            7 injectable knowledge packages             │
+│  opencode.jsonc     main config (models, MCP servers, perms)    │
+│  AGENTS.md          workflow instructions + tool preferences    │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## Swarm Plugin (Core)
-
-The `opencode-swarm-plugin` provides intelligent multi-agent coordination with learning capabilities. **Always use plugin tools over raw CLI commands.**
-
-### Installation
-
-```bash
-# From npm
-npm install opencode-swarm-plugin
-cp node_modules/opencode-swarm-plugin/dist/plugin.js ~/.config/opencode/plugin/swarm.js
-
-# Or symlink for development
-ln -sf ~/Code/joelhooks/opencode-swarm-plugin/dist/plugin.js ~/.config/opencode/plugin/swarm.js
-```
-
-### Plugin Tools
-
-**Beads** (issue tracking - replaces `bd` CLI):
-| Tool | Purpose |
-|------|---------|
-| `beads_create` | Create bead with type-safe validation |
-| `beads_create_epic` | Atomic epic + subtasks creation |
-| `beads_query` | Query with filters (replaces `bd list/ready/wip`) |
-| `beads_update` | Update status/description/priority |
-| `beads_close` | Close with reason |
-| `beads_start` | Mark in-progress |
-| `beads_ready` | Get next unblocked bead |
-| `beads_sync` | Sync to git (MANDATORY at session end) |
-
-**Agent Mail** (multi-agent coordination):
-| Tool | Purpose |
-|------|---------|
-| `agentmail_init` | Initialize session (project + agent registration) |
-| `agentmail_send` | Send message to agents |
-| `agentmail_inbox` | Fetch inbox (CONTEXT-SAFE: limit=5, no bodies) |
-| `agentmail_read_message` | Fetch ONE message body |
-| `agentmail_summarize_thread` | Summarize thread (PREFERRED over fetch all) |
-| `agentmail_reserve` | Reserve files for exclusive edit |
-| `agentmail_release` | Release reservations |
-
-**Swarm** (parallel task orchestration):
-| Tool | Purpose |
-|------|---------|
-| `swarm_select_strategy` | Analyze task, recommend strategy (file/feature/risk-based) |
-| `swarm_plan_prompt` | Generate strategy-specific decomposition prompt (queries CASS) |
-| `swarm_validate_decomposition` | Validate response, detect instruction conflicts |
-| `swarm_spawn_subtask` | Generate prompt for worker agent with Agent Mail/beads instructions |
-| `swarm_status` | Get swarm progress by epic ID |
-| `swarm_progress` | Report subtask progress |
-| `swarm_complete` | Complete subtask (runs UBS scan, releases reservations) |
-| `swarm_record_outcome` | Record outcome for learning (duration, errors, retries) |
-
-**Structured Output** (JSON parsing):
-| Tool | Purpose |
-|------|---------|
-| `structured_extract_json` | Extract JSON from markdown/text |
-| `structured_validate` | Validate against schema |
-| `structured_parse_evaluation` | Parse self-evaluation |
-| `structured_parse_bead_tree` | Parse epic decomposition |
-
-### Learning Capabilities
-
-The plugin learns from swarm outcomes to improve future decompositions:
-
-**Confidence Decay**: Evaluation criteria weights decay over time (90-day half-life) unless revalidated. Unreliable criteria get reduced weight.
-
-**Implicit Feedback**: `swarm_record_outcome` tracks task signals:
-
-- Fast completion + success → helpful signal
-- Slow completion + errors + retries → harmful signal
-
-**Pattern Maturity**: Decomposition patterns progress through states:
-
-- `candidate` → `established` → `proven` (or `deprecated`)
-
-**Anti-Pattern Learning**: Failed patterns auto-invert:
-
-- "Split by file type" (60% failure) → "AVOID: Split by file type"
-
-**Pre-Completion Validation**: `swarm_complete` runs UBS bug scan before closing.
-
-**History-Informed Decomposition**: `swarm_decompose` queries CASS for similar past tasks.
+---
 
 ## Commands
 
-| Command               | Description                                                        |
-| --------------------- | ------------------------------------------------------------------ |
-| `/swarm <task>`       | Decompose task into beads, spawn parallel agents with context sync |
-| `/swarm-status`       | Check status of running swarm                                      |
-| `/swarm-collect`      | Collect and merge swarm results                                    |
-| `/parallel "t1" "t2"` | Run explicit tasks in parallel                                     |
-| `/iterate <task>`     | Evaluator-optimizer loop until quality threshold met               |
-| `/debug <error>`      | Investigate error, check known patterns first                      |
-| `/debug-plus <error>` | Debug with prevention pipeline - creates beads, spawns fix swarm   |
-| `/triage <request>`   | Classify and route to appropriate handler                          |
-| `/fix-all`            | Survey PRs + beads, dispatch agents                                |
-| `/review-my-shit`     | Pre-PR self-review                                                 |
-| `/handoff`            | End session, sync beads, generate continuation                     |
-| `/sweep`              | Codebase cleanup pass                                              |
-| `/focus <bead-id>`    | Start focused session on specific bead                             |
-| `/context-dump`       | Dump state for context recovery                                    |
-| `/checkpoint`         | Compress context, summarize session                                |
-| `/commit`             | Smart commit with conventional format                              |
-| `/pr-create`          | Create PR with beads linking                                       |
-| `/repo-dive <repo>`   | Deep analysis of GitHub repo                                       |
-| `/worktree-task <id>` | Create git worktree for isolated work                              |
-| `/retro <bead-id>`    | Post-mortem: extract learnings                                     |
+```
+┌────────────────────┬──────────────────────────────────────────────┐
+│ SWARM              │                                              │
+├────────────────────┼──────────────────────────────────────────────┤
+│ /swarm <task>      │ Decompose → spawn parallel agents → merge    │
+│ /swarm-status      │ Check running swarm progress                 │
+│ /swarm-collect     │ Collect and merge swarm results              │
+│ /parallel "a" "b"  │ Run explicit tasks in parallel               │
+├────────────────────┼──────────────────────────────────────────────┤
+│ DEBUG              │                                              │
+├────────────────────┼──────────────────────────────────────────────┤
+│ /debug <error>     │ Investigate, check known patterns first      │
+│ /debug-plus        │ Debug + prevention pipeline + swarm fix      │
+│ /triage <request>  │ Classify and route to handler                │
+├────────────────────┼──────────────────────────────────────────────┤
+│ WORKFLOW           │                                              │
+├────────────────────┼──────────────────────────────────────────────┤
+│ /iterate <task>    │ Evaluator-optimizer loop until quality met   │
+│ /fix-all           │ Survey PRs + beads, dispatch agents          │
+│ /sweep             │ Codebase cleanup pass                        │
+│ /focus <bead-id>   │ Start focused session on specific bead       │
+│ /rmslop            │ Remove AI code slop from branch              │
+├────────────────────┼──────────────────────────────────────────────┤
+│ GIT                │                                              │
+├────────────────────┼──────────────────────────────────────────────┤
+│ /commit            │ Smart commit with conventional format        │
+│ /pr-create         │ Create PR with beads linking                 │
+│ /worktree-task     │ Create git worktree for isolated work        │
+├────────────────────┼──────────────────────────────────────────────┤
+│ SESSION            │                                              │
+├────────────────────┼──────────────────────────────────────────────┤
+│ /handoff           │ End session, sync beads, generate continue   │
+│ /checkpoint        │ Compress context, summarize session          │
+│ /context-dump      │ Dump state for context recovery              │
+│ /retro <bead-id>   │ Post-mortem: extract learnings               │
+│ /review-my-shit    │ Pre-PR self-review                           │
+├────────────────────┼──────────────────────────────────────────────┤
+│ EXPLORE            │                                              │
+├────────────────────┼──────────────────────────────────────────────┤
+│ /repo-dive <repo>  │ Deep analysis of GitHub repo                 │
+│ /estimate          │ Estimate task complexity                     │
+│ /standup           │ Generate standup summary                     │
+└────────────────────┴──────────────────────────────────────────────┘
+```
 
-## Custom Tools (Wrappers)
+---
 
-These wrap external CLIs for OpenCode integration:
+## Tools
 
-| Tool                | Description                                       |
-| ------------------- | ------------------------------------------------- |
-| `typecheck`         | TypeScript check with grouped errors              |
-| `git-context`       | Branch, status, commits, ahead/behind in one call |
-| `find-exports`      | Find where symbols are exported                   |
-| `pkg-scripts`       | List package.json scripts                         |
-| `repo-crawl_*`      | GitHub API repo exploration                       |
-| `repo-autopsy_*`    | Clone & deep analyze repos locally                |
-| `pdf-brain_*`       | PDF knowledge base with vector search             |
-| `semantic-memory_*` | Local vector store for persistent knowledge       |
-| `cass_*`            | Search all AI agent histories                     |
-| `ubs_*`             | Multi-language bug scanner                        |
+### Custom Tools (in `tool/`)
+
+| Tool                | Description                                              |
+| ------------------- | -------------------------------------------------------- |
+| `cass_*`            | Cross-agent session search (Claude, Cursor, Codex, etc.) |
+| `ubs_*`             | Multi-language bug scanner (JS/TS, Python, Rust, Go...)  |
+| `semantic-memory_*` | Persistent vector store for learnings                    |
+| `repo-crawl_*`      | GitHub API repo exploration                              |
+| `repo-autopsy_*`    | Clone & deep analyze repos locally                       |
+| `pdf-brain_*`       | PDF knowledge base with vector search                    |
+| `typecheck`         | TypeScript check with grouped errors                     |
+| `git-context`       | Branch, status, commits in one call                      |
+| `find-exports`      | Find where symbols are exported                          |
+| `pkg-scripts`       | List package.json scripts                                |
+
+### Plugin Tools (from `opencode-swarm-plugin`)
+
+**Beads** (git-backed issue tracking):
+
+```
+beads_create, beads_create_epic, beads_query, beads_update,
+beads_close, beads_start, beads_ready, beads_sync
+```
+
+**Swarm Mail** (multi-agent coordination):
+
+```
+swarmmail_init, swarmmail_send, swarmmail_inbox,
+swarmmail_read_message, swarmmail_reserve, swarmmail_release
+```
+
+**Swarm** (parallel orchestration):
+
+```
+swarm_select_strategy, swarm_plan_prompt, swarm_validate_decomposition,
+swarm_spawn_subtask, swarm_status, swarm_complete, swarm_record_outcome
+```
+
+**Skills** (knowledge injection):
+
+```
+skills_list, skills_use, skills_read, skills_create
+```
+
+---
 
 ## Agents
 
-| Agent           | Model             | Purpose                                               |
-| --------------- | ----------------- | ----------------------------------------------------- |
-| `swarm/planner` | claude-sonnet-4-5 | Strategic task decomposition for swarm coordination   |
-| `swarm/worker`  | claude-sonnet-4-5 | **PRIMARY for /swarm** - parallel task implementation |
-| `beads`         | claude-haiku      | Issue tracker operations (locked down)                |
-| `archaeologist` | default           | Read-only codebase exploration                        |
-| `refactorer`    | default           | Pattern migration across codebase                     |
-| `reviewer`      | default           | Read-only code review, audits                         |
+```
+┌─────────────────┬───────────────────┬────────────────────────────────┐
+│ Agent           │ Model             │ Purpose                        │
+├─────────────────┼───────────────────┼────────────────────────────────┤
+│ swarm/planner   │ claude-sonnet-4-5 │ Strategic task decomposition   │
+│ swarm/worker    │ claude-sonnet-4-5 │ Parallel task implementation   │
+│ beads           │ claude-haiku      │ Issue tracker (locked down)    │
+│ archaeologist   │ claude-sonnet-4-5 │ Read-only codebase exploration │
+│ explore         │ claude-haiku-4-5  │ Fast search, pattern discovery │
+│ refactorer      │ default           │ Pattern migration              │
+│ reviewer        │ default           │ Read-only code review          │
+└─────────────────┴───────────────────┴────────────────────────────────┘
+```
+
+---
+
+## Skills
+
+Injectable knowledge packages in `skills/`:
+
+| Skill                  | When to Use                                                 |
+| ---------------------- | ----------------------------------------------------------- |
+| `testing-patterns`     | Adding tests, breaking dependencies, characterization tests |
+| `swarm-coordination`   | Multi-agent decomposition, parallel work                    |
+| `cli-builder`          | Building CLIs, argument parsing, subcommands                |
+| `learning-systems`     | Confidence decay, pattern maturity                          |
+| `skill-creator`        | Meta-skill for creating new skills                          |
+| `system-design`        | Architecture decisions, module boundaries                   |
+| `ai-optimized-content` | Content optimized for AI consumption                        |
+
+```bash
+# Load a skill
+skills_use(name="testing-patterns")
+
+# With context
+skills_use(name="cli-builder", context="building a new CLI tool")
+```
+
+---
 
 ## Knowledge Files
 
-- **effect-patterns.md** - Effect-TS services, layers, schema, error handling
-- **error-patterns.md** - Common errors with known fixes
-- **git-patterns.md** - Git workflows, branching strategies
-- **mastra-agent-patterns.md** - AI agent coordination patterns
-- **nextjs-patterns.md** - RSC, caching, App Router gotchas
-- **testing-patterns.md** - Testing strategies
-- **typescript-patterns.md** - Advanced TypeScript patterns
-- **prevention-patterns.md** - Error-to-prevention mappings (15 patterns)
+| File                       | Topics                                     |
+| -------------------------- | ------------------------------------------ |
+| `effect-patterns.md`       | Effect-TS services, layers, schema, errors |
+| `error-patterns.md`        | Common errors with known fixes             |
+| `prevention-patterns.md`   | Error-to-prevention mappings               |
+| `nextjs-patterns.md`       | RSC, caching, App Router gotchas           |
+| `testing-patterns.md`      | Testing strategies, mocking                |
+| `typescript-patterns.md`   | Advanced TypeScript patterns               |
+| `git-patterns.md`          | Git workflows, branching                   |
+| `mastra-agent-patterns.md` | AI agent coordination                      |
+
+---
 
 ## MCP Servers
 
 Configured in `opencode.jsonc`:
 
-- `next-devtools` - Next.js dev server integration
-- `chrome-devtools` - Browser automation
-- `context7` - Library documentation lookup
-- `fetch` - Web fetching with markdown conversion
+| Server            | Purpose                               |
+| ----------------- | ------------------------------------- |
+| `next-devtools`   | Next.js dev server integration        |
+| `chrome-devtools` | Browser automation, DOM inspection    |
+| `context7`        | Library documentation lookup          |
+| `fetch`           | Web fetching with markdown conversion |
+| `snyk`            | Security scanning (SCA, SAST, IaC)    |
 
-**Note:** Agent Mail MCP is available but prefer `agentmail_*` plugin tools for context safety.
+---
 
-## Cross-Agent Tools
+## Plugins
 
-### CASS (Coding Agent Session Search)
+### `swarm.ts` - Core Orchestration
 
-Search across all your AI coding agent histories before solving problems from scratch:
+Thin wrapper that shells out to `swarm` CLI. Provides:
 
-```
-cass_search(query="authentication error", limit=5)
-cass_search(query="useEffect", agent="claude", days=7)
-cass_view(path="/path/to/session.jsonl", line=42)
-```
+- Beads tools (issue tracking)
+- Swarm Mail tools (agent coordination)
+- Swarm tools (parallel orchestration)
+- Skills tools (knowledge injection)
+- Structured output tools (JSON parsing)
+- Session compacting hook (state recovery)
 
-**Indexed agents:** Claude Code, Codex, Cursor, Gemini, Aider, ChatGPT, Cline, OpenCode, Amp, Pi-Agent
+### `notify.ts` - Audio Alerts
 
-### UBS (Ultimate Bug Scanner)
+Plays macOS system sounds on events:
 
-Multi-language bug scanner - runs automatically on `swarm_complete`:
+- `session.idle` → Ping
+- `swarm_complete` success → Glass
+- `swarm_abort` → Basso (error)
+- `beads_sync` success → Glass
 
-```
-ubs_scan(staged=true)      # Pre-commit
-ubs_scan(path="src/")      # Specific path
-ubs_scan_json(path=".")    # JSON output
-```
+---
 
-**Languages:** JS/TS, Python, C/C++, Rust, Go, Java, Ruby, Swift
-**Catches:** Null safety, XSS, async/await bugs, memory leaks, type coercion
+## Learning System
 
-## Key Patterns
-
-### Swarm-First Workflow
-
-For any multi-step task, use `/swarm`:
+The swarm plugin learns from outcomes:
 
 ```
-/swarm "Add user authentication with OAuth providers"
+┌─────────────────────────────────────────────────────────────────┐
+│                     LEARNING PIPELINE                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐         │
+│  │   CASS      │───▶│  Decompose  │───▶│   Execute   │         │
+│  │  (history)  │    │  (strategy) │    │  (workers)  │         │
+│  └─────────────┘    └─────────────┘    └─────────────┘         │
+│         │                                     │                 │
+│         │                                     ▼                 │
+│         │                            ┌─────────────┐           │
+│         │                            │   Record    │           │
+│         │                            │  Outcome    │           │
+│         │                            └─────────────┘           │
+│         │                                     │                 │
+│         ▼                                     ▼                 │
+│  ┌─────────────────────────────────────────────────┐           │
+│  │              PATTERN MATURITY                    │           │
+│  │  candidate → established → proven → deprecated   │           │
+│  └─────────────────────────────────────────────────┘           │
+│                                                                 │
+│  • Confidence decay (90-day half-life)                         │
+│  • Anti-pattern inversion (>60% failure → AVOID)               │
+│  • Implicit feedback (fast+success vs slow+errors)             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-This:
+---
+
+## Key Workflows
+
+### Swarm-First Development
+
+```bash
+/swarm "Add user authentication with OAuth"
+```
 
 1. Queries CASS for similar past tasks
-2. Decomposes into parallelizable subtasks
-3. Creates epic + subtasks atomically via `beads_create_epic`
-4. Spawns `swarm/worker` agents (Sonnet 4.5) with file reservations
-5. Agents communicate via Agent Mail threads
-6. `swarm_complete` runs UBS scan before closing
-7. `swarm_record_outcome` tracks learning signals
-
-**Why Sonnet for workers?** Cost-effective for implementation tasks. Coordinator uses default model for decomposition/orchestration.
-
-### Context Preservation
-
-Plugin tools enforce hard limits to prevent context exhaustion:
-
-- `agentmail_inbox` - Max 5 messages, bodies excluded
-- `agentmail_summarize_thread` - Preferred over fetching all
-- Auto-release reservations on session.idle
-- Auto-sync beads after close
+2. Selects strategy (file/feature/risk-based)
+3. Decomposes into parallelizable subtasks
+4. Creates epic + subtasks via `beads_create_epic`
+5. Spawns `swarm/worker` agents with file reservations
+6. Workers communicate via Swarm Mail
+7. `swarm_complete` runs UBS scan before closing
+8. `swarm_record_outcome` tracks learning signals
 
 ### Session End Protocol
 
 **NON-NEGOTIABLE** - the plane is not landed until push succeeds:
 
+```bash
+beads_sync()    # Sync to git
+git push        # Push to remote
+git status      # Verify "up to date with origin"
 ```
-beads_sync()           # Sync to git
-git push               # Push to remote
-git status             # Verify "up to date with origin"
+
+### Context Preservation
+
+Plugin tools enforce hard limits:
+
+- `swarmmail_inbox` - Max 5 messages, bodies excluded
+- `swarmmail_summarize_thread` - Preferred over fetch all
+- Auto-release reservations on session.idle
+
+---
+
+## Permissions
+
+```jsonc
+{
+  "permission": {
+    "bash": {
+      "git push": "ask", // Confirm before pushing
+      "git push *": "ask",
+      "sudo *": "deny",
+      "rm -rf /": "deny",
+      "rm -rf ~": "deny",
+    },
+  },
+}
 ```
+
+---
 
 ## Prerequisites
 
-| Requirement      | Purpose                                         |
-| ---------------- | ----------------------------------------------- |
-| OpenCode 1.0+    | Plugin host                                     |
-| Agent Mail MCP   | Multi-agent coordination (`localhost:8765`)     |
-| Beads CLI (`bd`) | Git-backed issue tracking                       |
-| CASS             | Cross-agent session search (optional)           |
-| UBS              | Bug scanning (optional, used by swarm_complete) |
+| Requirement   | Purpose                                          |
+| ------------- | ------------------------------------------------ |
+| OpenCode 1.0+ | Plugin host                                      |
+| Node.js 18+   | Runtime                                          |
+| `swarm` CLI   | Orchestration (`npm i -g opencode-swarm-plugin`) |
+| Ollama        | Local embeddings for semantic-memory, pdf-brain  |
+
+---
 
 ## License
 
 MIT
+
+---
+
+```
+    ╔═══════════════════════════════════════════════════════════╗
+    ║                                                           ║
+    ║   "The best code is no code at all. The second best      ║
+    ║    is code that writes itself."                          ║
+    ║                                                           ║
+    ║                              - Every AI coding agent      ║
+    ║                                                           ║
+    ╚═══════════════════════════════════════════════════════════╝
+```

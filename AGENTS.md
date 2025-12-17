@@ -10,12 +10,12 @@ The `opencode-swarm-plugin` provides type-safe, context-preserving wrappers. Alw
 
 ### Tool Priority Order
 
-1. **Swarm Plugin Tools** - `beads_*`, `agentmail_*`, `swarm_*`, `structured_*` (ALWAYS FIRST)
+1. **Swarm Plugin Tools** - `hive_*`, `agentmail_*`, `swarm_*`, `structured_*` (ALWAYS FIRST)
 2. **Read/Edit** - direct file operations over bash cat/sed
 3. **ast-grep** - structural code search over regex grep
 4. **Glob/Grep** - file discovery over find commands
 5. **Task (subagent)** - complex multi-step exploration, parallel work
-6. **Bash** - system commands, git, running tests/builds (NOT for beads/agentmail)
+6. **Bash** - system commands, git, running tests/builds (NOT for hive/agentmail)
 
 ### MCP Servers Available
 
@@ -26,17 +26,19 @@ The `opencode-swarm-plugin` provides type-safe, context-preserving wrappers. Alw
 
 ### Swarm Plugin Tools (PRIMARY - use these)
 
-**Beads** (issue tracking):
+**Hive** (work item tracking):
 | Tool | Purpose |
 |------|---------|
-| `beads_create` | Create bead with type-safe validation |
-| `beads_create_epic` | Atomic epic + subtasks creation |
-| `beads_query` | Query with filters (replaces `bd list/ready/wip`) |
-| `beads_update` | Update status/description/priority |
-| `beads_close` | Close with reason |
-| `beads_start` | Mark in-progress |
-| `beads_ready` | Get next unblocked bead |
-| `beads_sync` | Sync to git (MANDATORY at session end) |
+| `hive_create` | Create cell with type-safe validation |
+| `hive_create_epic` | Atomic epic + subtasks creation |
+| `hive_query` | Query with filters (replaces `bd list/ready/wip`) |
+| `hive_update` | Update status/description/priority |
+| `hive_close` | Close with reason |
+| `hive_start` | Mark in-progress |
+| `hive_ready` | Get next unblocked cell |
+| `hive_sync` | Sync to git (MANDATORY at session end) |
+
+> **Migration Note:** `beads_*` aliases still work but show deprecation warnings. Update to `hive_*` tools.
 
 **Agent Mail** (multi-agent coordination):
 | Tool | Purpose |
@@ -55,7 +57,7 @@ The `opencode-swarm-plugin` provides type-safe, context-preserving wrappers. Alw
 | `swarm_select_strategy` | Analyze task, recommend strategy (file/feature/risk-based) |
 | `swarm_plan_prompt` | Generate strategy-specific decomposition prompt (queries CASS) |
 | `swarm_validate_decomposition` | Validate response, detect conflicts |
-| `swarm_spawn_subtask` | Generate prompt for worker agent with Agent Mail/beads instructions |
+| `swarm_spawn_subtask` | Generate prompt for worker agent with Agent Mail/hive instructions |
 | `swarm_status` | Get swarm progress by epic ID |
 | `swarm_progress` | Report subtask progress |
 | `swarm_complete` | Complete subtask (runs UBS scan, releases reservations) |
@@ -67,7 +69,33 @@ The `opencode-swarm-plugin` provides type-safe, context-preserving wrappers. Alw
 | `structured_extract_json` | Extract JSON from markdown/text |
 | `structured_validate` | Validate against schema |
 | `structured_parse_evaluation` | Parse self-evaluation |
-| `structured_parse_bead_tree` | Parse epic decomposition |
+| `structured_parse_cell_tree` | Parse epic decomposition |
+
+**Skills** (knowledge injection):
+| Tool | Purpose |
+|------|---------|
+| `skills_list` | List available skills (global, project, bundled) |
+| `skills_use` | Load skill into context with optional task context |
+| `skills_read` | Read skill content including SKILL.md and references |
+| `skills_create` | Create new skill with SKILL.md template |
+
+**CASS** (cross-agent session search):
+| Tool | Purpose |
+|------|---------|
+| `cass_search` | Search all AI agent histories (query, agent, days, limit) |
+| `cass_view` | View specific session from search results |
+| `cass_expand` | Expand context around a specific line |
+| `cass_health` | Check if index is ready |
+| `cass_index` | Build/rebuild search index |
+
+**Semantic Memory** (persistent learning):
+| Tool | Purpose |
+|------|---------|
+| `semantic-memory_find` | Search memories by semantic similarity |
+| `semantic-memory_store` | Store learnings with metadata |
+| `semantic-memory_validate` | Validate memory accuracy (resets decay) |
+| `semantic-memory_list` | List stored memories |
+| `semantic-memory_stats` | Show memory statistics |
 
 ### Other Custom Tools
 
@@ -78,14 +106,13 @@ The `opencode-swarm-plugin` provides type-safe, context-preserving wrappers. Alw
 - **repo-crawl\_\*** - GitHub API repo exploration
 - **repo-autopsy\_\*** - Clone & deep analyze repos locally
 - **pdf-brain\_\*** - PDF knowledge base
-- **semantic-memory\_\*** - Local vector store
-- **cass\_\*** - Search all AI agent histories
 - **ubs\_\*** - Multi-language bug scanner
 
 ### DEPRECATED - Do Not Use Directly
 
-- ~~`bd` CLI commands~~ → Use `beads_*` plugin tools
-- ~~`bd-quick_*` tools~~ → Use `beads_*` plugin tools
+- ~~`bd` CLI commands~~ → Use `hive_*` plugin tools
+- ~~`bd-quick_*` tools~~ → Use `hive_*` plugin tools
+- ~~`beads_*` tools~~ → Use `hive_*` plugin tools (aliases deprecated)
 - ~~Agent Mail MCP tools~~ → Use `agentmail_*` plugin tools
 
 **Why?** Plugin tools have:
@@ -182,9 +209,9 @@ Swarm is the primary pattern for multi-step work. It handles task decomposition,
 This triggers:
 
 1. `swarm_decompose` - queries CASS for similar past tasks, generates decomposition prompt
-2. Agent responds with BeadTree JSON
+2. Agent responds with CellTree JSON
 3. `swarm_validate_decomposition` - validates structure, detects file conflicts and instruction conflicts
-4. `beads_create_epic` - creates epic + subtasks atomically
+4. `hive_create_epic` - creates epic + subtasks atomically
 5. Parallel agents spawn with `swarm_subtask_prompt`
 6. Each agent: `agentmail_reserve` → work → `swarm_complete`
 7. `swarm_complete` runs UBS scan, releases reservations, records outcome
@@ -223,8 +250,8 @@ swarm_decompose(task="Add auth", max_subtasks=5, query_cass=true)
 # 2. Validate agent response
 swarm_validate_decomposition(response="{ epic: {...}, subtasks: [...] }")
 
-# 3. Create beads
-beads_create_epic(epic_title="Add auth", subtasks=[...])
+# 3. Create cells
+hive_create_epic(epic_title="Add auth", subtasks=[...])
 
 # 4. For each subtask agent:
 agentmail_init(project_path="/path/to/repo")
@@ -233,16 +260,16 @@ agentmail_reserve(paths=["src/auth/**"], reason="bd-123.1: Auth service")
 swarm_complete(project_key="...", agent_name="BlueLake", bead_id="bd-123.1", summary="Done", files_touched=["src/auth.ts"])
 ```
 
-## Beads Workflow (via Plugin)
+## Hive Workflow (via Plugin)
 
-<beads*context>
-Beads is a git-backed issue tracker. \*\*Always use `beads*\*`plugin tools, not raw`bd` CLI commands.\*\* Plugin tools have type-safe validation and integrate with swarm learning.
-</beads_context>
+<hive_context>
+Hive is a git-backed work item tracker. **Always use `hive_*` plugin tools, not raw `bd` CLI commands.** Plugin tools have type-safe validation and integrate with swarm learning.
+</hive_context>
 
 ### Absolute Rules
 
 - **NEVER** create TODO.md, TASKS.md, PLAN.md, or any markdown task tracking files
-- **ALWAYS** use `beads_*` plugin tools (not `bd` CLI directly)
+- **ALWAYS** use `hive_*` plugin tools (not `bd` CLI directly)
 - **ALWAYS** sync before ending a session - the plane is not landed until `git push` succeeds
 - **NEVER** push directly to main for multi-file changes - use feature branches + PRs
 - **ALWAYS** use `/swarm` for parallel work
@@ -250,30 +277,30 @@ Beads is a git-backed issue tracker. \*\*Always use `beads*\*`plugin tools, not 
 ### Session Start
 
 ```
-beads_ready()                              # What's unblocked?
-beads_query(status="in_progress")          # What's mid-flight?
+hive_ready()                              # What's unblocked?
+hive_query(status="in_progress")          # What's mid-flight?
 ```
 
 ### During Work
 
 ```
 # Starting a task
-beads_start(id="bd-123")
+hive_start(id="bd-123")
 
 # Found a bug while working
-beads_create(title="Found the thing", type="bug", priority=0)
+hive_create(title="Found the thing", type="bug", priority=0)
 
 # Completed work
-beads_close(id="bd-123", reason="Done: implemented auth flow")
+hive_close(id="bd-123", reason="Done: implemented auth flow")
 
 # Update description
-beads_update(id="bd-123", description="Updated scope...")
+hive_update(id="bd-123", description="Updated scope...")
 ```
 
 ### Epic Decomposition (Atomic)
 
 ```
-beads_create_epic(
+hive_create_epic(
   epic_title="Feature Name",
   epic_description="Overall goal",
   subtasks=[
@@ -290,10 +317,10 @@ beads_create_epic(
 
 ```
 # 1. Close completed work
-beads_close(id="bd-123", reason="Done")
+hive_close(id="bd-123", reason="Done")
 
 # 2. Sync to git
-beads_sync()
+hive_sync()
 
 # 3. Push (YOU do this, don't defer to user)
 git push
@@ -302,7 +329,7 @@ git push
 git status   # MUST show "up to date with origin"
 
 # 5. What's next?
-beads_ready()
+hive_ready()
 ```
 
 ## Agent Mail (via Plugin)
@@ -343,11 +370,233 @@ agentmail_send(to=["OtherAgent"], subject="Status", body="Done with auth", threa
 agentmail_release()
 ```
 
-### Integration with Beads
+### Integration with Hive
 
-- Use bead ID as `thread_id` (e.g., `thread_id="bd-123"`)
-- Include bead ID in reservation `reason` for traceability
+- Use cell ID as `thread_id` (e.g., `thread_id="bd-123"`)
+- Include cell ID in reservation `reason` for traceability
 - `swarm_complete` auto-releases reservations
+
+---
+
+## Swarm Mail Coordination (MANDATORY for Multi-Agent Work)
+
+<swarm_mail_mandates>
+**CRITICAL: These are NOT suggestions. Violating these rules breaks coordination and causes conflicts.**
+
+Swarm Mail is the ONLY way agents coordinate in parallel work. Silent agents cause conflicts, duplicate work, and wasted effort.
+</swarm_mail_mandates>
+
+### ABSOLUTE Requirements
+
+**ALWAYS** use Swarm Mail when:
+
+1. **Working in a swarm** (spawned as a worker agent)
+2. **Editing files others might touch** - reserve BEFORE modifying
+3. **Blocked on external dependencies** - notify coordinator immediately
+4. **Discovering scope changes** - don't silently expand the task
+5. **Finding bugs in other agents' work** - coordinate, don't fix blindly
+6. **Completing a subtask** - use `swarm_complete`, not manual close
+
+**NEVER**:
+
+1. **Work silently** - if you haven't sent a progress update in 15+ minutes, you're doing it wrong
+2. **Skip initialization** - `swarmmail_init` is MANDATORY before any file modifications
+3. **Modify reserved files** - check reservations first, request access if needed
+4. **Complete without releasing** - `swarm_complete` handles this, manual close breaks tracking
+5. **Use generic thread IDs** - ALWAYS use cell ID (e.g., `thread_id="bd-123.4"`)
+
+### MANDATORY Triggers
+
+| Situation                   | Action                                             | Consequence of Non-Compliance                                  |
+| --------------------------- | -------------------------------------------------- | -------------------------------------------------------------- |
+| **Spawned as swarm worker** | `swarmmail_init()` FIRST, before reading files     | `swarm_complete` fails, work not tracked, conflicts undetected |
+| **About to modify files**   | `swarmmail_reserve()` with cell ID in reason       | Edit conflicts, lost work, angry coordinator                   |
+| **Blocked >5 minutes**      | `swarmmail_send(importance="high")` to coordinator | Wasted time, missed dependencies, swarm stalls                 |
+| **Every 30 min of work**    | `swarmmail_send()` progress update                 | Coordinator assumes you're stuck, may reassign work            |
+| **Scope expands**           | `swarmmail_send()` + `hive_update()` description  | Silent scope creep, integration failures                       |
+| **Found bug in dependency** | `swarmmail_send()` to owner, don't fix             | Duplicate work, conflicting fixes                              |
+| **Subtask complete**        | `swarm_complete()` (not `hive_close`)             | Reservations not released, learning data lost                  |
+
+### Good vs Bad Usage
+
+#### ❌ BAD (Silent Agent)
+
+```
+# Agent spawns, reads files, makes changes, closes cell
+hive_start(id="bd-123.2")
+# ... does work silently for 45 minutes ...
+hive_close(id="bd-123.2", reason="Done")
+```
+
+**Consequences:**
+
+- No reservation tracking → edit conflicts with other agents
+- No progress visibility → coordinator can't unblock dependencies
+- Manual close → learning signals lost, reservations not released
+- Integration hell when merging
+
+#### ✅ GOOD (Coordinated Agent)
+
+```
+# 1. INITIALIZE FIRST
+swarmmail_init(project_path="/abs/path", task_description="bd-123.2: Add auth service")
+
+# 2. RESERVE FILES
+swarmmail_reserve(paths=["src/auth/**"], reason="bd-123.2: Auth service implementation")
+
+# 3. PROGRESS UPDATES (every milestone)
+swarmmail_send(
+  to=["coordinator"],
+  subject="Progress: bd-123.2",
+  body="Schema defined, starting service layer. ETA 20min.",
+  thread_id="bd-123"
+)
+
+# 4. IF BLOCKED
+swarmmail_send(
+  to=["coordinator"],
+  subject="BLOCKED: bd-123.2 needs database schema",
+  body="Can't proceed without db migration from bd-123.1. Need schema for User table.",
+  importance="high",
+  thread_id="bd-123"
+)
+
+# 5. COMPLETE (not manual close)
+swarm_complete(
+  project_key="/abs/path",
+  agent_name="BlueLake",
+  bead_id="bd-123.2",
+  summary="Auth service implemented with JWT strategy",
+  files_touched=["src/auth/service.ts", "src/auth/schema.ts"]
+)
+# Auto-releases reservations, records learning signals, runs UBS scan
+```
+
+### Coordinator Communication Patterns
+
+**Progress Updates** (every 30min or at milestones):
+
+```
+swarmmail_send(
+  to=["coordinator"],
+  subject="Progress: <cell-id>",
+  body="<what's done, what's next, ETA>",
+  thread_id="<epic-id>"
+)
+```
+
+**Blockers** (immediately when stuck >5min):
+
+```
+swarmmail_send(
+  to=["coordinator"],
+  subject="BLOCKED: <cell-id> - <short reason>",
+  body="<detailed blocker, what you need, who owns it>",
+  importance="high",
+  thread_id="<epic-id>"
+)
+hive_update(id="<cell-id>", status="blocked")
+```
+
+**Scope Changes**:
+
+```
+swarmmail_send(
+  to=["coordinator"],
+  subject="Scope Change: <cell-id>",
+  body="Found X, suggests expanding to include Y. Adds ~15min. Proceed?",
+  thread_id="<epic-id>",
+  ack_required=true
+)
+# Wait for coordinator response before expanding
+```
+swarmmail_send(
+  to=["coordinator"],
+  subject="Progress: <bead-id>",
+  body="<what's done, what's next, ETA>",
+  thread_id="<epic-id>"
+)
+```
+
+**Blockers** (immediately when stuck >5min):
+
+```
+swarmmail_send(
+  to=["coordinator"],
+  subject="BLOCKED: <bead-id> - <short reason>",
+  body="<detailed blocker, what you need, who owns it>",
+  importance="high",
+  thread_id="<epic-id>"
+)
+hive_update(id="<cell-id>", status="blocked")
+```
+
+**Scope Changes**:
+
+```
+swarmmail_send(
+  to=["coordinator"],
+  subject="Scope Change: <bead-id>",
+  body="Found X, suggests expanding to include Y. Adds ~15min. Proceed?",
+  thread_id="<epic-id>",
+  ack_required=true
+)
+# Wait for coordinator response before expanding
+```
+
+**Cross-Agent Dependencies**:
+
+```
+# Don't fix other agents' bugs - coordinate
+swarmmail_send(
+  to=["OtherAgent", "coordinator"],
+  subject="Potential issue in bd-123.1",
+  body="Auth service expects User.email but schema has User.emailAddress. Can you align?",
+  thread_id="bd-123"
+)
+```
+
+### File Reservation Strategy
+
+**Reserve early, release late:**
+
+```
+# Reserve at START of work
+swarmmail_reserve(
+  paths=["src/auth/**", "src/lib/jwt.ts"],
+  reason="bd-123.2: Auth service",
+  ttl_seconds=3600  # 1 hour
+)
+
+# Work...
+
+# Release via swarm_complete (automatic)
+swarm_complete(...)  # Releases all your reservations
+```
+
+**Requesting access to reserved files:**
+
+```
+# Check who owns reservation
+swarmmail_inbox()  # Shows active reservations in system messages
+
+# Request access
+swarmmail_send(
+  to=["OtherAgent"],
+  subject="Need access to src/lib/jwt.ts",
+  body="Need to add refresh token method. Can you release or should I wait?",
+  importance="high"
+)
+```
+
+### Integration with Hive
+
+- **thread_id = epic ID** for all swarm communication (e.g., `bd-123`)
+- **Subject includes subtask ID** for traceability (e.g., `bd-123.2`)
+- **Reservation reason includes subtask ID** (e.g., `"bd-123.2: Auth service"`)
+- **Never manual close** - always use `swarm_complete`
+
+---
 
 ## OpenCode Commands
 
@@ -355,19 +604,19 @@ Custom commands available via `/command`:
 
 | Command               | Purpose                                                              |
 | --------------------- | -------------------------------------------------------------------- |
-| `/swarm <task>`       | Decompose task into beads, spawn parallel agents with shared context |
+| `/swarm <task>`       | Decompose task into cells, spawn parallel agents with shared context |
 | `/parallel "t1" "t2"` | Run explicit task list in parallel                                   |
-| `/fix-all`            | Survey PRs + beads, dispatch agents to fix issues                    |
+| `/fix-all`            | Survey PRs + cells, dispatch agents to fix issues                    |
 | `/review-my-shit`     | Pre-PR self-review: lint, types, common mistakes                     |
-| `/handoff`            | End session: sync beads, generate continuation prompt                |
+| `/handoff`            | End session: sync hive, generate continuation prompt                |
 | `/sweep`              | Codebase cleanup: type errors, lint, dead code                       |
-| `/focus <bead-id>`    | Start focused session on specific bead                               |
+| `/focus <cell-id>`    | Start focused session on specific cell                               |
 | `/context-dump`       | Dump state for model switch or context recovery                      |
 | `/checkpoint`         | Compress context: summarize session, preserve decisions              |
-| `/retro <bead-id>`    | Post-mortem: extract learnings, update knowledge files               |
-| `/worktree-task <id>` | Create git worktree for isolated bead work                           |
-| `/commit`             | Smart commit with conventional format + beads refs                   |
-| `/pr-create`          | Create PR with beads linking + smart summary                         |
+| `/retro <cell-id>`    | Post-mortem: extract learnings, update knowledge files               |
+| `/worktree-task <id>` | Create git worktree for isolated cell work                           |
+| `/commit`             | Smart commit with conventional format + cell refs                   |
+| `/pr-create`          | Create PR with cell linking + smart summary                         |
 | `/debug <error>`      | Investigate error, check known patterns first                        |
 | `/debug-plus`         | Enhanced debug with swarm integration and prevention pipeline        |
 | `/iterate <task>`     | Evaluator-optimizer loop: generate, critique, improve until good     |
@@ -382,8 +631,9 @@ Specialized subagents (invoke with `@agent-name` or auto-dispatched):
 | --------------- | ----------------- | ----------------------------------------------------- |
 | `swarm/planner` | claude-sonnet-4-5 | Strategic task decomposition for swarm coordination   |
 | `swarm/worker`  | claude-sonnet-4-5 | **PRIMARY for /swarm** - parallel task implementation |
-| `beads`         | claude-haiku      | Issue tracker operations (locked down)                |
-| `archaeologist` | default           | Read-only codebase exploration, architecture mapping  |
+| `hive`          | claude-haiku      | Work item tracker operations (locked down)            |
+| `archaeologist` | claude-sonnet-4-5 | Read-only codebase exploration, architecture mapping  |
+| `explore`       | claude-haiku-4-5  | Fast codebase search, pattern discovery (read-only)   |
 | `refactorer`    | default           | Pattern migration across codebase                     |
 | `reviewer`      | default           | Read-only code review, security/perf audits           |
 
@@ -394,6 +644,37 @@ Direct. Terse. No fluff. We're sparring partners - disagree when I'm wrong. Curs
 <documentation_style>
 use JSDOC to document components and functions
 </documentation_style>
+
+<pr_style>
+**BE EXTRA WITH ASCII ART.** PRs are marketing. They get shared on Twitter. Make them memorable.
+
+- Add ASCII art banners for major features (use figlet-style or custom)
+- Use emoji strategically (not excessively)
+- Include architecture diagrams (ASCII or Mermaid)
+- Add visual test result summaries
+- Credit inspirations and dependencies properly
+- End with a "ship it" flourish
+
+Examples of good PR vibes:
+
+```
+    🐝   SWARM MAIL   🐝
+   ━━━━━━━━━━━━━━━━━━━━
+   Actor-Model Primitives
+```
+
+```
+┌─────────────────────────┐
+│  ARCHITECTURE DIAGRAM   │
+├─────────────────────────┤
+│  Layer 3: Coordination  │
+│  Layer 2: Patterns      │
+│  Layer 1: Primitives    │
+└─────────────────────────┘
+```
+
+PRs should make people want to click, read, and share.
+</pr_style>
 
 ## Knowledge Files (Load On-Demand)
 
@@ -482,8 +763,9 @@ These texts shape how Joel thinks about software. They're not reference material
 
 - Effective TypeScript by Dan Vanderkam (62 specific ways, type narrowing, inference)
 - Refactoring by Martin Fowler (extract method, rename, small safe steps)
-- Working Effectively with Legacy Code by Michael Feathers (seams)
+- Working Effectively with Legacy Code by Michael Feathers (seams, characterization tests, dependency breaking)
 - Test-Driven Development by Kent Beck (red-green-refactor, fake it til you make it)
+- 4 Rules of Simple Design by Corey Haines/Kent Beck (tests pass, reveals intention, no duplication, fewest elements)
 
 ### Systems & Scale
 
@@ -508,7 +790,50 @@ Channel these people's thinking when their domain expertise applies. Not "what w
 - **Alexis King** - "parse, don't validate", type-driven design
 - **Venkatesh Rao** - Ribbonfarm, tempo, OODA loops, "premium mediocre", narrative rationality
 
-## CASS - Cross-Agent Session Search
+## Skills (Knowledge Injection)
+
+Skills are reusable knowledge packages. Load them on-demand for specialized tasks.
+
+### When to Use
+
+- **Before unfamiliar work** - check if a skill exists
+- **When you need domain-specific patterns** - load the relevant skill
+- **For complex workflows** - skills provide step-by-step guidance
+
+### Usage
+
+```
+skills_list()                              # See available skills
+skills_use(name="swarm-coordination")      # Load a skill
+skills_use(name="cli-builder", context="building a new CLI") # With context
+skills_read(name="mcp-tool-authoring")     # Read full skill content
+```
+
+### Bundled Skills (Global - ship with plugin)
+
+| Skill                  | When to Use                                                                                                                      |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **testing-patterns**   | Adding tests, breaking dependencies, characterization tests. Feathers seams + Beck's 4 rules. **USE THIS FOR ALL TESTING WORK.** |
+| **swarm-coordination** | Multi-agent task decomposition, parallel work, file reservations                                                                 |
+| **cli-builder**        | Building CLIs, argument parsing, help text, subcommands                                                                          |
+| **learning-systems**   | Confidence decay, pattern maturity, feedback loops                                                                               |
+| **skill-creator**      | Meta-skill for creating new skills                                                                                               |
+| **system-design**      | Architecture decisions, module boundaries, API design                                                                            |
+
+### Skill Triggers (Auto-load these)
+
+```
+Writing tests?           → skills_use(name="testing-patterns")
+Breaking dependencies?   → skills_use(name="testing-patterns")
+Multi-agent work?        → skills_use(name="swarm-coordination")
+Building a CLI?          → skills_use(name="cli-builder")
+```
+
+**Pro tip:** `testing-patterns` has a full catalog of 25 dependency-breaking techniques in `references/dependency-breaking-catalog.md`. Gold for getting gnarly code under test.
+
+---
+
+## CASS (Cross-Agent Session Search)
 
 Search across ALL your AI coding agent histories. Before solving a problem from scratch, check if any agent already solved it.
 
@@ -516,9 +841,9 @@ Search across ALL your AI coding agent histories. Before solving a problem from 
 
 ### When to Use
 
-- **Before implementing**: "Has any agent solved auth token refresh before?"
-- **Debugging**: "What did I try last time this error happened?"
-- **Learning patterns**: "How did Cursor handle this API?"
+- **BEFORE implementing** - check if any agent solved it before
+- **Debugging** - "what did I try last time this error happened?"
+- **Learning patterns** - "how did Cursor handle this API?"
 
 ### Quick Reference
 
@@ -545,6 +870,216 @@ cass_expand(path="/path/to/session.jsonl", line=42, context=5)
 ### Token Budget
 
 Use `fields="minimal"` for compact output (path, line, agent only).
+
+**Pro tip:** Query CASS at the START of complex tasks. Past solutions save time.
+
+---
+
+## Semantic Memory (Persistent Learning)
+
+Store and retrieve learnings across sessions. Memories persist and are searchable by semantic similarity.
+
+### When to Use
+
+- **After solving a tricky problem** - store the solution
+- **After making architectural decisions** - store the reasoning
+- **Before starting work** - search for relevant past learnings
+- **When you discover project-specific patterns** - capture them
+
+### Usage
+
+```bash
+# Store a learning (include WHY, not just WHAT)
+semantic-memory_store(information="OAuth refresh tokens need 5min buffer before expiry to avoid race conditions", metadata="auth, tokens, oauth")
+
+# Search for relevant memories
+semantic-memory_find(query="token refresh", limit=5)
+
+# Validate a memory is still accurate (resets decay timer)
+semantic-memory_validate(id="mem_123")
+
+# List all memories
+semantic-memory_list()
+
+# Check stats
+semantic-memory_stats()
+```
+
+### Memory Decay
+
+Memories decay over time (90-day half-life). Validate memories you confirm are still accurate to reset their decay timer. This keeps the knowledge base fresh and relevant.
+
+**Pro tip:** Store the WHY, not just the WHAT. Future you needs context.
+
+---
+
+## Semantic Memory Usage (MANDATORY Triggers)
+
+<semantic_memory_mandates>
+**CRITICAL: Semantic Memory is NOT optional note-taking. It's the forcing function that prevents solving the same problem twice.**
+
+Agents MUST proactively store learnings. The rule is simple: if you learned it the hard way, store it so the next agent (or future you) doesn't.
+</semantic_memory_mandates>
+
+### ABSOLUTE Requirements
+
+**ALWAYS** store memories after:
+
+1. **Solving a tricky bug** - especially ones that took >30min to debug
+2. **Making architectural decisions** - document the WHY, alternatives considered, tradeoffs
+3. **Discovering project-specific patterns** - domain rules, business logic quirks
+4. **Debugging sessions that revealed root causes** - not just "fixed X", but "X fails because Y"
+5. **Learning tool/library gotchas** - API quirks, version-specific bugs, workarounds
+6. **Performance optimizations** - what you tried, what worked, measured impact
+7. **Failed approaches** - store anti-patterns to avoid repeating mistakes
+
+**NEVER**:
+
+1. **Store generic knowledge** - "React hooks need dependencies" is not a memory, it's documentation
+2. **Store without context** - include the problem, solution, AND reasoning
+3. **Assume others will remember** - if it's not in semantic memory, it doesn't exist
+4. **Skip validation** - when you confirm a memory is still accurate, validate it to reset decay
+
+### MANDATORY Triggers
+
+| Situation                        | Action                                               | Consequence of Non-Compliance                 |
+| -------------------------------- | ---------------------------------------------------- | --------------------------------------------- |
+| **Debugging >30min**             | `semantic-memory_store()` with root cause + solution | Next agent wastes another 30min on same issue |
+| **Architectural decision**       | Store reasoning, alternatives, tradeoffs             | Future changes break assumptions, regression  |
+| **Project-specific pattern**     | Store domain rule with examples                      | Inconsistent implementations across codebase  |
+| **Tool/library gotcha**          | Store quirk + workaround                             | Repeated trial-and-error, wasted time         |
+| **Before starting complex work** | `semantic-memory_find()` to check for learnings      | Reinventing wheels, ignoring past failures    |
+| **After /debug-plus success**    | Store prevention pattern if one was created          | Prevention patterns not reused, bugs recur    |
+
+### Good vs Bad Usage
+
+#### ❌ BAD (Generic/Useless Memory)
+
+```
+# Too generic - this is in React docs
+semantic-memory_store(
+  information="useEffect cleanup functions prevent memory leaks",
+  metadata="react, hooks"
+)
+
+# No context - WHAT but not WHY
+semantic-memory_store(
+  information="Changed auth timeout to 5 minutes",
+  metadata="auth"
+)
+
+# Symptom, not root cause
+semantic-memory_store(
+  information="Fixed the login bug by adding a null check",
+  metadata="bugs"
+)
+```
+
+**Consequences:**
+
+- Memory database filled with noise
+- Search returns useless results
+- Actual useful learnings buried
+
+#### ✅ GOOD (Actionable Memory with Context)
+
+```
+# Root cause + reasoning
+semantic-memory_store(
+  information="OAuth refresh tokens need 5min buffer before expiry to avoid race conditions. Without buffer, token refresh can fail mid-request if expiry happens between check and use. Implemented with: if (expiresAt - Date.now() < 300000) refresh(). Affects all API clients using refresh tokens.",
+  metadata="auth, oauth, tokens, race-conditions, api-clients"
+)
+
+# Architectural decision with tradeoffs
+semantic-memory_store(
+  information="Chose event sourcing for audit log instead of snapshot model. Rationale: immutable event history required for compliance (SOC2). Tradeoff: slower queries (mitigated with materialized views), but guarantees we can reconstruct any historical state. Alternative considered: dual-write to events + snapshots (rejected due to consistency complexity).",
+  metadata="architecture, audit-log, event-sourcing, compliance"
+)
+
+# Project-specific domain rule
+semantic-memory_store(
+  information="In this project, User.role='admin' does NOT grant deletion rights. Deletion requires explicit User.permissions.canDelete=true. This is because admin role is granted to support staff who shouldn't delete production data. Tripped up 3 agents so far. Check User.permissions, not User.role.",
+  metadata="domain-rules, auth, permissions, gotcha"
+)
+
+# Failed approach (anti-pattern)
+semantic-memory_store(
+  information="AVOID: Using Zod refinements for async validation. Attempted to validate unique email constraint with .refine(async email => !await db.exists(email)). Problem: Zod runs refinements during parse, blocking the event loop. Solution: validate uniqueness in application layer after parse, return specific validation error. Save Zod for synchronous structural validation only.",
+  metadata="zod, validation, async, anti-pattern, performance"
+)
+
+# Tool-specific gotcha
+semantic-memory_store(
+  information="Next.js 16 Cache Components: useSearchParams() causes entire component to become dynamic, breaking 'use cache'. Workaround: destructure params in parent Server Component, pass as props to cached child. Example: <CachedChild query={searchParams.query} />. Affects all search/filter UIs.",
+  metadata="nextjs, cache-components, dynamic-rendering, searchparams"
+)
+```
+
+### When to Search Memories (BEFORE Acting)
+
+**ALWAYS** query semantic memory BEFORE:
+
+1. **Starting a complex task** - check if past agents solved similar problems
+2. **Debugging unfamiliar errors** - search for error messages, symptoms
+3. **Making architectural decisions** - review past decisions in same domain
+4. **Using unfamiliar tools/libraries** - check for known gotchas
+5. **Implementing cross-cutting features** - search for established patterns
+
+**Search Strategies:**
+
+```bash
+# Specific error message
+semantic-memory_find(query="cannot read property of undefined auth", limit=3)
+
+# Domain area
+semantic-memory_find(query="authentication tokens refresh", limit=5)
+
+# Technology stack
+semantic-memory_find(query="Next.js caching searchParams", limit=3)
+
+# Pattern type
+semantic-memory_find(query="event sourcing materialized views", limit=5)
+```
+
+### Memory Validation Workflow
+
+When you encounter a memory from search results and confirm it's still accurate:
+
+```bash
+# Found a memory that helped solve current problem
+semantic-memory_validate(id="mem_xyz123")
+```
+
+**This resets the 90-day decay timer.** Memories that stay relevant get reinforced. Stale memories fade.
+
+### Integration with Debug-Plus
+
+The `/debug-plus` command creates prevention patterns. **ALWAYS** store these in semantic memory:
+
+```bash
+# After debug-plus creates a prevention pattern
+semantic-memory_store(
+  information="Prevention pattern for 'headers already sent' error: root cause is async middleware calling next() before awaiting response write. Detection: grep for 'res.send|res.json' followed by 'next()' without await. Prevention: enforce middleware contract - await all async operations before next(). Automated via UBS scan.",
+  metadata="debug-plus, prevention-pattern, express, async, middleware"
+)
+```
+
+### Memory Hygiene
+
+**DO**:
+
+- Include error messages verbatim (searchable)
+- Tag with technology stack, domain area, pattern type
+- Explain WHY something works, not just WHAT to do
+- Include code examples inline when short (<5 lines)
+- Store failed approaches to prevent repetition
+
+**DON'T**:
+
+- Store without metadata (memories need tags for retrieval)
+- Duplicate documentation (if it's in official docs, link it instead)
+- Store implementation details that change frequently
+- Use vague descriptions ("fixed the thing" → "fixed race condition in auth token refresh by adding 5min buffer")
 
 ---
 

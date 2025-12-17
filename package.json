@@ -1,6 +1,7 @@
 {
   "dependencies": {
-    "@opencode-ai/plugin": "1.0.138"
+    "@opencode-ai/plugin": "0.0.0-dev-202512172036",
+    "opencode-swarm-plugin": "^0.12.18"
   },
   "devDependencies": {
     "@types/node": "^20.19.26",
