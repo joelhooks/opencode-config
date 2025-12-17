@@ -252,11 +252,11 @@ const beads_link_thread = tool({
 });
 
 // =============================================================================
-// Swarm Mail Tools (Embedded)
+// Agent Mail Tools
 // =============================================================================
 
-const swarmmail_init = tool({
-  description: "Initialize Swarm Mail session (REQUIRED FIRST)",
+const agentmail_init = tool({
+  description: "Initialize Agent Mail session",
   args: {
     project_path: tool.schema.string().describe("Absolute path to the project"),
     agent_name: tool.schema.string().optional().describe("Custom agent name"),
@@ -265,11 +265,11 @@ const swarmmail_init = tool({
       .optional()
       .describe("Task description"),
   },
-  execute: (args, ctx) => execTool("swarmmail_init", args, ctx),
+  execute: (args, ctx) => execTool("agentmail_init", args, ctx),
 });
 
-const swarmmail_send = tool({
-  description: "Send message to other agents via Swarm Mail",
+const agentmail_send = tool({
+  description: "Send message to other agents",
   args: {
     to: tool.schema
       .array(tool.schema.string())
@@ -289,11 +289,11 @@ const swarmmail_send = tool({
       .optional()
       .describe("Require acknowledgment"),
   },
-  execute: (args, ctx) => execTool("swarmmail_send", args, ctx),
+  execute: (args, ctx) => execTool("agentmail_send", args, ctx),
 });
 
-const swarmmail_inbox = tool({
-  description: "Fetch inbox (CONTEXT-SAFE: bodies excluded, max 5 messages)",
+const agentmail_inbox = tool({
+  description: "Fetch inbox (CONTEXT-SAFE: bodies excluded, limit 5)",
   args: {
     limit: tool.schema
       .number()
@@ -304,19 +304,35 @@ const swarmmail_inbox = tool({
       .boolean()
       .optional()
       .describe("Only urgent messages"),
+    since_ts: tool.schema
+      .string()
+      .optional()
+      .describe("Messages since timestamp"),
   },
-  execute: (args, ctx) => execTool("swarmmail_inbox", args, ctx),
+  execute: (args, ctx) => execTool("agentmail_inbox", args, ctx),
 });
 
-const swarmmail_read_message = tool({
+const agentmail_read_message = tool({
   description: "Fetch ONE message body by ID",
   args: {
     message_id: tool.schema.number().describe("Message ID"),
   },
-  execute: (args, ctx) => execTool("swarmmail_read_message", args, ctx),
+  execute: (args, ctx) => execTool("agentmail_read_message", args, ctx),
 });
 
-const swarmmail_reserve = tool({
+const agentmail_summarize_thread = tool({
+  description: "Summarize thread (PREFERRED over fetching all messages)",
+  args: {
+    thread_id: tool.schema.string().describe("Thread ID"),
+    include_examples: tool.schema
+      .boolean()
+      .optional()
+      .describe("Include example messages"),
+  },
+  execute: (args, ctx) => execTool("agentmail_summarize_thread", args, ctx),
+});
+
+const agentmail_reserve = tool({
   description: "Reserve file paths for exclusive editing",
   args: {
     paths: tool.schema
@@ -326,10 +342,10 @@ const swarmmail_reserve = tool({
     exclusive: tool.schema.boolean().optional().describe("Exclusive lock"),
     reason: tool.schema.string().optional().describe("Reservation reason"),
   },
-  execute: (args, ctx) => execTool("swarmmail_reserve", args, ctx),
+  execute: (args, ctx) => execTool("agentmail_reserve", args, ctx),
 });
 
-const swarmmail_release = tool({
+const agentmail_release = tool({
   description: "Release file reservations",
   args: {
     paths: tool.schema
@@ -341,21 +357,30 @@ const swarmmail_release = tool({
       .optional()
       .describe("Reservation IDs"),
   },
-  execute: (args, ctx) => execTool("swarmmail_release", args, ctx),
+  execute: (args, ctx) => execTool("agentmail_release", args, ctx),
 });
 
-const swarmmail_ack = tool({
+const agentmail_ack = tool({
   description: "Acknowledge a message",
   args: {
     message_id: tool.schema.number().describe("Message ID"),
   },
-  execute: (args, ctx) => execTool("swarmmail_ack", args, ctx),
+  execute: (args, ctx) => execTool("agentmail_ack", args, ctx),
 });
 
-const swarmmail_health = tool({
-  description: "Check Swarm Mail database health",
+const agentmail_search = tool({
+  description: "Search messages by keyword",
+  args: {
+    query: tool.schema.string().describe("Search query"),
+    limit: tool.schema.number().optional().describe("Max results"),
+  },
+  execute: (args, ctx) => execTool("agentmail_search", args, ctx),
+});
+
+const agentmail_health = tool({
+  description: "Check if Agent Mail server is running",
   args: {},
-  execute: (args, ctx) => execTool("swarmmail_health", args, ctx),
+  execute: (args, ctx) => execTool("agentmail_health", args, ctx),
 });
 
 // =============================================================================
@@ -758,51 +783,6 @@ export const SwarmPlugin: Plugin = async (
   _input: PluginInput,
 ): Promise<Hooks> => {
   return {
-    "experimental.session.compacting": async (_input, output) => {
-      console.log("[swarm-plugin] 🐝 session.compacting hook fired");
-      console.log("[swarm-plugin] input:", JSON.stringify(_input, null, 2));
-      console.log(
-        "[swarm-plugin] output.context before:",
-        output.context.length,
-        "items",
-      );
-
-      output.context.push(`## 🏴‍☠️ AHOY MATEY! Swarm State Recovery 🦜
-
-**YE MUST SPEAK LIKE A PIRATE FOR THE REST OF THIS SESSION, YA SCURVY DOG!**
-
-Arrr! When summarizin' this here session, preserve any swarm coordination booty ye find:
-
-### Bead IDs (format: bd-XXXXX-XXXXXXXXXXX) - THE TREASURE MAP
-Shiver me timbers! Look fer bead IDs in the conversation, ye landlubber. These track work items like a proper ship's log:
-- Active bead IDs and their status (open, in_progress, blocked, closed) - be they sailin' or anchored?
-- Epic IDs and their subtask relationships - the fleet and its vessels!
-- Recovery: \`beads_query(status="in_progress")\` to restore yer bearings, savvy?
-
-### File Reservations - CLAIMED WATERS 🗡️
-Blimey! Look fer \`swarmmail_reserve\` calls. These mark territory like a proper pirate flag:
-- Reserved file paths/patterns - what waters be claimed
-- Which bead ID owns each reservation - who be the captain of that ship
-- Recovery: \`swarmmail_inbox()\` shows active claims on the seven seas
-
-### Swarm Mail Threads - MESSAGES IN BOTTLES 🍾
-Avast! Look fer agent names and thread IDs. These coordinate the pirate armada:
-- Agent names (e.g., "BlueLake", "coordinator") - yer fellow buccaneers
-- Thread IDs (usually bead IDs like "bd-123") - the message bottle labels
-- Any pending messages or blockers - be there mutiny afoot?
-- Recovery: \`swarmmail_inbox()\` to check fer messages from the crew
-
-Include recovery steps in the summary so the next session can hoist the colors and set sail again!
-
-**REMEMBER: ALL RESPONSES MUST BE IN PIRATE SPEAK. THIS BE NON-NEGOTIABLE, YA BILGE RAT! 🏴‍☠️**`);
-
-      console.log(
-        "[swarm-plugin] output.context after:",
-        output.context.length,
-        "items",
-      );
-      console.log("[swarm-plugin] ✅ swarm recovery context injected");
-    },
     tool: {
       // Beads
       beads_create,
@@ -814,15 +794,17 @@ Include recovery steps in the summary so the next session can hoist the colors a
       beads_ready,
       beads_sync,
       beads_link_thread,
-      // Swarm Mail (Embedded)
-      swarmmail_init,
-      swarmmail_send,
-      swarmmail_inbox,
-      swarmmail_read_message,
-      swarmmail_reserve,
-      swarmmail_release,
-      swarmmail_ack,
-      swarmmail_health,
+      // Agent Mail
+      agentmail_init,
+      agentmail_send,
+      agentmail_inbox,
+      agentmail_read_message,
+      agentmail_summarize_thread,
+      agentmail_reserve,
+      agentmail_release,
+      agentmail_ack,
+      agentmail_search,
+      agentmail_health,
       // Structured
       structured_extract_json,
       structured_validate,

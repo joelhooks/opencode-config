@@ -38,6 +38,40 @@ const needsDb: Effect.Effect<User, DbError, Database> = Database.findUser(id);
 
 ---
 
+### Effect.fn - Traced Functions
+
+Use `Effect.fn` for named, traced functions with automatic call-site tracking:
+
+```typescript
+// Creates a traced function - shows up in error stack traces
+const processUser = Effect.fn("processUser")(function* (userId: string) {
+  yield* Effect.logInfo(`Processing user ${userId}`);
+  const user = yield* getUser(userId);
+  return yield* processData(user);
+});
+
+// With explicit types
+const fetchData = Effect.fn("fetchData")<
+  [url: string],
+  Data,
+  FetchError,
+  HttpClient
+>(function* (url) {
+  const client = yield* HttpClient;
+  return yield* client.get(url);
+});
+```
+
+**When to use**:
+
+- Service methods that you want traced in errors
+- Functions called from multiple places (easier debugging)
+- Any function where call-site matters for debugging
+
+**Key insight**: `Effect.fn` gives you named stack traces without manual span creation.
+
+---
+
 ### Effect.gen vs pipe - When to Use Which
 
 **Use `Effect.gen` for**:
@@ -297,6 +331,41 @@ const promoted = pipe(
 
 ---
 
+### Schema.Defect for Unknown Errors
+
+Wrap errors from external libraries that you can't control:
+
+```typescript
+// Schema.Defect wraps unknown errors safely
+class ApiError extends Schema.TaggedError<ApiError>()("ApiError", {
+  endpoint: Schema.String,
+  statusCode: Schema.Number,
+  cause: Schema.Defect, // Wraps unknown errors from fetch, etc.
+}) {}
+
+// Use when catching external library errors
+const fetchUser = (id: string) =>
+  Effect.tryPromise({
+    try: () => fetch(`/api/users/${id}`).then((r) => r.json()),
+    catch: (error) =>
+      new ApiError({
+        endpoint: `/api/users/${id}`,
+        statusCode: 500,
+        cause: error, // Unknown error wrapped safely
+      }),
+  });
+
+// The cause is preserved for debugging but safely typed
+```
+
+**When to use**:
+
+- Wrapping errors from `fetch`, database drivers, etc.
+- When you need to preserve the original error for debugging
+- External library errors that don't have typed errors
+
+---
+
 ### Effect.orDie, Effect.orElse
 
 ```typescript
@@ -418,6 +487,48 @@ const FullAppLayer = pipe(
 // Build the full dependency graph
 const program = pipe(myApp, Effect.provide(FullAppLayer));
 ```
+
+---
+
+### Layer Memoization (IMPORTANT)
+
+Store parameterized layers in constants to avoid duplicate resource construction:
+
+```typescript
+// ✅ GOOD: Single connection pool shared by all services
+const postgresLayer = Postgres.layer({ url: "...", poolSize: 10 });
+
+const appLayer = Layer.merge(
+  UserRepo.layer.pipe(Layer.provide(postgresLayer)),
+  OrderRepo.layer.pipe(Layer.provide(postgresLayer)),
+);
+// Both repos share the SAME pool
+
+// ❌ BAD: Creates TWO separate connection pools!
+const appLayerBad = Layer.merge(
+  UserRepo.layer.pipe(
+    Layer.provide(Postgres.layer({ url: "...", poolSize: 10 })),
+  ),
+  OrderRepo.layer.pipe(
+    Layer.provide(Postgres.layer({ url: "...", poolSize: 10 })),
+  ),
+);
+// Each repo gets its own pool - resource waste!
+
+// ✅ GOOD: Memoize expensive layers
+const ExpensiveServiceLive = Layer.effect(
+  ExpensiveService,
+  Effect.gen(function* () {
+    yield* Effect.logInfo("Initializing expensive service...");
+    // This should only run ONCE
+    return {
+      /* ... */
+    };
+  }),
+).pipe(Layer.memoize); // Explicit memoization
+```
+
+**Key insight**: Layer construction is NOT automatically memoized. If you inline `Layer.effect(...)` in multiple places, it runs multiple times. Extract to a constant or use `Layer.memoize`.
 
 ---
 
@@ -913,6 +1024,39 @@ const testProgram = pipe(
   ),
 );
 ```
+
+---
+
+### Config.redacted for Secrets
+
+Use `Config.redacted` for sensitive values that shouldn't appear in logs:
+
+```typescript
+import { Config, Redacted } from "effect";
+
+// Define secret config
+const SecureConfig = Config.all({
+  apiKey: Config.redacted("API_KEY"), // Hidden in logs
+  dbPassword: Config.redacted("DB_PASSWORD"),
+  publicUrl: Config.string("PUBLIC_URL"), // Normal, can be logged
+});
+
+// Use in effect
+const program = Effect.gen(function* () {
+  const config = yield* SecureConfig;
+
+  // Extract the actual value when needed
+  const headers = {
+    Authorization: `Bearer ${Redacted.value(config.apiKey)}`,
+  };
+
+  // Safe to log - shows <redacted>
+  yield* Effect.logInfo(`Config loaded: ${config.apiKey}`);
+  // Output: Config loaded: <redacted>
+});
+```
+
+**Key insight**: `Redacted.value()` extracts the secret, but the Redacted wrapper prevents accidental logging.
 
 ---
 
