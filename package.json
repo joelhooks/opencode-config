@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@opencode-ai/plugin": "0.0.0-dev-202512181632",
+    "@opencode-ai/plugin": "0.0.0-dev-202512181659",
     "opencode-swarm-plugin": "^0.12.18",
     "swarm-mail": "^0.2.1"
   },

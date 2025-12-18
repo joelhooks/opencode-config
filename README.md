@@ -34,7 +34,7 @@ Built on [`joelhooks/swarmtools`](https://github.com/joelhooks/swarmtools) - mul
 
 ```bash
 git clone https://github.com/joelhooks/opencode-config ~/.config/opencode
-cd ~/.config/opencode && pnpm install
+cd ~/.config/opencode && bun install
 ```
 
 ### 2. Install CLI Tools
