@@ -306,6 +306,128 @@ test("saves user and can retrieve them", async () => {
 ## What Good Tests Look Like
 
 > "Think about letting the code in the test be a mirror of the test description." — Corey Haines, _4 Rules of Simple Design_
+> `pdf-brain_search(query="test name influence test code explicit")`
+
+### One Assertion Per Test
+
+> "As a general rule, it's wise to have only a single verify statement in each it clause. This is because the test will fail on the first verification failure—which can often hide useful information when you're figuring out why a test is broken." — Martin Fowler, _Refactoring_
+> `pdf-brain_search(query="single verify statement it clause")`
+
+When a test with 15 assertions fails, which one broke? You're now debugging your tests instead of your code.
+
+```typescript
+// ❌ BAD: Multiple assertions - which one failed?
+test("user registration", async () => {
+  const result = await register({ email: "a@b.com", password: "12345678" });
+
+  expect(result.success).toBe(true);
+  expect(result.user.email).toBe("a@b.com");
+  expect(result.user.id).toBeDefined();
+  expect(result.user.createdAt).toBeInstanceOf(Date);
+  expect(result.token).toMatch(/^eyJ/);
+  expect(sendWelcomeEmail).toHaveBeenCalled();
+  expect(analytics.track).toHaveBeenCalledWith("user_registered");
+});
+// Test fails: "expected true, got false" — WHICH expectation?!
+
+// ✅ GOOD: One behavior per test
+describe("user registration", () => {
+  test("returns success for valid input", async () => {
+    const result = await register({ email: "a@b.com", password: "12345678" });
+    expect(result.success).toBe(true);
+  });
+
+  test("creates user with provided email", async () => {
+    const result = await register({ email: "a@b.com", password: "12345678" });
+    expect(result.user.email).toBe("a@b.com");
+  });
+
+  test("generates auth token", async () => {
+    const result = await register({ email: "a@b.com", password: "12345678" });
+    expect(result.token).toMatch(/^eyJ/);
+  });
+
+  test("sends welcome email", async () => {
+    await register({ email: "a@b.com", password: "12345678" });
+    expect(sendWelcomeEmail).toHaveBeenCalled();
+  });
+});
+// Test fails: "user registration > sends welcome email" — IMMEDIATELY obvious
+```
+
+**Exception:** Multiple assertions on the _same_ logical thing are fine:
+
+```typescript
+// ✅ OK: Multiple assertions, one concept
+test("returns user object with required fields", async () => {
+  const user = await getUser(1);
+
+  expect(user).toMatchObject({
+    id: 1,
+    email: expect.any(String),
+    createdAt: expect.any(Date),
+  });
+});
+```
+
+### Arrange-Act-Assert (Given-When-Then)
+
+> "You'll hear these phases described variously as setup-exercise-verify, given-when-then, or arrange-act-assert." — Martin Fowler, _Refactoring_
+> `pdf-brain_search(query="setup exercise verify given when then arrange")`
+
+Structure every test the same way:
+
+```typescript
+test("applies discount to orders over $100", () => {
+  // ARRANGE (Given): Set up the scenario
+  const order = new Order();
+  order.addItem({ price: 150 });
+
+  // ACT (When): Do the thing
+  const total = order.checkout();
+
+  // ASSERT (Then): Verify the outcome
+  expect(total).toBe(135); // 10% discount
+});
+```
+
+This structure makes tests **scannable**. You can glance at any test and immediately understand:
+
+- What's the setup?
+- What action triggers the behavior?
+- What's the expected outcome?
+
+### Test Names as Executable Specifications
+
+> "A characterization test is a test that characterizes the actual behavior of a piece of code. There's no 'Well, it should do this' or 'I think it does that.' The tests document the actual current behavior." — Michael Feathers, _Working Effectively with Legacy Code_
+> `pdf-brain_search(query="characterization test actual behavior document")`
+
+Your test names should read like a spec. Someone should understand the system's behavior just by reading test names:
+
+```typescript
+describe("ShoppingCart", () => {
+  test("starts empty");
+  test("adds items with quantity");
+  test("calculates subtotal from item prices");
+  test("applies percentage discount codes");
+  test("rejects expired discount codes");
+  test("limits quantity to available stock");
+  test("preserves items across sessions for logged-in users");
+});
+// This IS the specification. No separate docs needed.
+```
+
+**BDD-style naming** (Given/When/Then in the name):
+
+```typescript
+describe("checkout", () => {
+  test("given cart over $100, when checking out, then applies free shipping");
+  test("given expired coupon, when applying, then shows error message");
+  test(
+    "given out-of-stock item, when checking out, then removes item and notifies user",
+  );
+});
+```
 
 ### Test Behavior, Not Implementation
 
