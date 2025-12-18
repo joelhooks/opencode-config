@@ -135,7 +135,7 @@ The `opencode-swarm-plugin` provides type-safe, context-preserving wrappers. Alw
 - **pkg-scripts** - List package.json scripts
 - **repo-crawl\_\*** - GitHub API repo exploration
 - **repo-autopsy\_\*** - Clone & deep analyze repos locally
-- **pdf-brain\_\*** - PDF knowledge base
+- **pdf-brain\_\*** - PDF & Markdown knowledge base (supports URLs, `--expand` for context)
 - **ubs\_\*** - Multi-language bug scanner
 
 ### DEPRECATED - Do Not Use Directly

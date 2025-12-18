@@ -1,11 +1,12 @@
 import { tool } from "@opencode-ai/plugin";
 import { existsSync } from "fs";
-import { join, basename } from "path";
+import { join, basename, extname } from "path";
 import { spawn } from "child_process";
 
 /**
- * PDF Brain - Local PDF knowledge base with vector search
+ * PDF Brain - Local knowledge base with vector search
  *
+ * Supports PDFs and Markdown files (local paths or URLs).
  * Uses PGlite + pgvector for semantic search via Ollama embeddings.
  * Stores in ~/Documents/.pdf-library/ for iCloud sync.
  */
@@ -19,8 +20,7 @@ async function runCli(
   signal?: AbortSignal,
 ): Promise<string> {
   return new Promise((resolve) => {
-    // Use bunx for faster execution than npx (no registry check if cached)
-    const proc = spawn("bunx", ["pdf-brain", ...args], {
+    const proc = spawn("pdf-brain", args, {
       env: { ...process.env },
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -75,31 +75,48 @@ async function runCli(
   });
 }
 
+function isUrl(str: string): boolean {
+  return str.startsWith("http://") || str.startsWith("https://");
+}
+
+function isValidFile(path: string): boolean {
+  const ext = extname(path).toLowerCase();
+  return ext === ".pdf" || ext === ".md" || ext === ".markdown";
+}
+
 export const add = tool({
   description:
-    "Add a PDF to the library - extracts text, generates embeddings for semantic search",
+    "Add a PDF or Markdown file to the library - extracts text, generates embeddings for semantic search. Supports local paths and URLs.",
   args: {
-    path: tool.schema.string().describe("Path to PDF file"),
+    path: tool.schema.string().describe("Path to file (PDF/Markdown) or URL"),
     tags: tool.schema.string().optional().describe("Comma-separated tags"),
     title: tool.schema
       .string()
       .optional()
-      .describe("Custom title (default: filename)"),
+      .describe("Custom title (default: filename or frontmatter)"),
   },
-  async execute({ path: pdfPath, tags, title }, ctx) {
-    // Resolve path
-    const resolvedPath = pdfPath.startsWith("~")
-      ? pdfPath.replace("~", process.env.HOME || "")
-      : pdfPath.startsWith("/")
-        ? pdfPath
-        : join(process.cwd(), pdfPath);
+  async execute({ path: filePath, tags, title }, ctx) {
+    // Handle URLs directly
+    if (isUrl(filePath)) {
+      const args = ["add", filePath];
+      if (tags) args.push("--tags", tags);
+      if (title) args.push("--title", title);
+      return runCli(args, EMBEDDING_TIMEOUT_MS, ctx?.abort);
+    }
+
+    // Resolve local path
+    const resolvedPath = filePath.startsWith("~")
+      ? filePath.replace("~", process.env.HOME || "")
+      : filePath.startsWith("/")
+        ? filePath
+        : join(process.cwd(), filePath);
 
     if (!existsSync(resolvedPath)) {
       return `File not found: ${resolvedPath}`;
     }
 
-    if (!resolvedPath.toLowerCase().endsWith(".pdf")) {
-      return "Not a PDF file";
+    if (!isValidFile(resolvedPath)) {
+      return "Unsupported file type. Use PDF or Markdown files.";
     }
 
     const args = ["add", resolvedPath];
@@ -113,7 +130,7 @@ export const add = tool({
 
 export const search = tool({
   description:
-    "Semantic search across all PDFs using vector similarity (requires Ollama)",
+    "Semantic search across all documents using vector similarity (requires Ollama)",
   args: {
     query: tool.schema.string().describe("Natural language search query"),
     limit: tool.schema
@@ -124,13 +141,18 @@ export const search = tool({
     fts: tool.schema
       .boolean()
       .optional()
-      .describe("Use full-text search only (no embeddings)"),
+      .describe("Use full-text search only (skip embeddings)"),
+    expand: tool.schema
+      .number()
+      .optional()
+      .describe("Expand context around matches (max: 4000 chars)"),
   },
-  async execute({ query, limit, tag, fts }, ctx) {
+  async execute({ query, limit, tag, fts, expand }, ctx) {
     const args = ["search", query];
     if (limit) args.push("--limit", String(limit));
     if (tag) args.push("--tag", tag);
     if (fts) args.push("--fts");
+    if (expand) args.push("--expand", String(Math.min(expand, 4000)));
 
     // Vector search needs Ollama for query embedding (unless fts-only)
     return runCli(args, fts ? DEFAULT_TIMEOUT_MS : 60_000, ctx?.abort);
@@ -138,17 +160,17 @@ export const search = tool({
 });
 
 export const read = tool({
-  description: "Get details about a specific PDF in the library",
+  description: "Get document details and metadata",
   args: {
-    query: tool.schema.string().describe("PDF ID or title"),
+    query: tool.schema.string().describe("Document ID or title"),
   },
   async execute({ query }, ctx) {
-    return runCli(["get", query], DEFAULT_TIMEOUT_MS, ctx?.abort);
+    return runCli(["read", query], DEFAULT_TIMEOUT_MS, ctx?.abort);
   },
 });
 
 export const list = tool({
-  description: "List all PDFs in the library",
+  description: "List all documents in the library",
   args: {
     tag: tool.schema.string().optional().describe("Filter by tag"),
   },
@@ -160,9 +182,9 @@ export const list = tool({
 });
 
 export const remove = tool({
-  description: "Remove a PDF from the library",
+  description: "Remove a document from the library",
   args: {
-    query: tool.schema.string().describe("PDF ID or title to remove"),
+    query: tool.schema.string().describe("Document ID or title to remove"),
   },
   async execute({ query }, ctx) {
     return runCli(["remove", query], DEFAULT_TIMEOUT_MS, ctx?.abort);
@@ -170,9 +192,9 @@ export const remove = tool({
 });
 
 export const tag = tool({
-  description: "Set tags on a PDF",
+  description: "Set tags on a document",
   args: {
-    query: tool.schema.string().describe("PDF ID or title"),
+    query: tool.schema.string().describe("Document ID or title"),
     tags: tool.schema.string().describe("Comma-separated tags to set"),
   },
   async execute({ query, tags }, ctx) {
@@ -196,10 +218,81 @@ export const check = tool({
   },
 });
 
-export const batch_add = tool({
-  description: "Add multiple PDFs from a directory",
+export const repair = tool({
+  description:
+    "Fix database integrity issues - removes orphaned chunks/embeddings",
+  args: {},
+  async execute(_args, ctx) {
+    return runCli(["repair"], DEFAULT_TIMEOUT_MS, ctx?.abort);
+  },
+});
+
+export const exportLib = tool({
+  description: "Export library database for backup or sharing",
   args: {
-    dir: tool.schema.string().describe("Directory containing PDFs"),
+    output: tool.schema
+      .string()
+      .optional()
+      .describe("Output file path (default: ./pdf-brain-export.tar.gz)"),
+  },
+  async execute({ output }, ctx) {
+    const args = ["export"];
+    if (output) args.push("--output", output);
+    return runCli(args, 60_000, ctx?.abort);
+  },
+});
+
+export const importLib = tool({
+  description: "Import library database from export archive",
+  args: {
+    file: tool.schema.string().describe("Path to export archive"),
+    force: tool.schema
+      .boolean()
+      .optional()
+      .describe("Overwrite existing library"),
+  },
+  async execute({ file, force }, ctx) {
+    const args = ["import", file];
+    if (force) args.push("--force");
+    return runCli(args, 60_000, ctx?.abort);
+  },
+});
+
+export const migrate = tool({
+  description: "Database migration utilities",
+  args: {
+    check: tool.schema
+      .boolean()
+      .optional()
+      .describe("Check if migration is needed"),
+    importFile: tool.schema
+      .string()
+      .optional()
+      .describe("Import from SQL dump file"),
+    generateScript: tool.schema
+      .boolean()
+      .optional()
+      .describe("Generate export script for current database"),
+  },
+  async execute({ check, importFile, generateScript }, ctx) {
+    const args = ["migrate"];
+    if (check) args.push("--check");
+    if (importFile) args.push("--import", importFile);
+    if (generateScript) args.push("--generate-script");
+
+    // If no flags, just run migrate (shows help)
+    if (!check && !importFile && !generateScript) {
+      args.push("--check");
+    }
+
+    return runCli(args, 60_000, ctx?.abort);
+  },
+});
+
+export const batch_add = tool({
+  description: "Add multiple PDFs/Markdown files from a directory",
+  args: {
+    dir: tool.schema.string().describe("Directory containing documents"),
     tags: tool.schema.string().optional().describe("Tags to apply to all"),
     recursive: tool.schema
       .boolean()
@@ -217,43 +310,40 @@ export const batch_add = tool({
       return `Directory not found: ${resolvedDir}`;
     }
 
-    // Find PDFs
-    const { readdirSync, statSync } = await import("fs");
+    // Find documents
+    const { readdirSync } = await import("fs");
 
-    function findPdfs(dir: string, recurse: boolean): string[] {
+    function findDocs(dir: string, recurse: boolean): string[] {
       const results: string[] = [];
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const fullPath = join(dir, entry.name);
         if (entry.isDirectory() && recurse) {
-          results.push(...findPdfs(fullPath, true));
-        } else if (
-          entry.isFile() &&
-          entry.name.toLowerCase().endsWith(".pdf")
-        ) {
+          results.push(...findDocs(fullPath, true));
+        } else if (entry.isFile() && isValidFile(entry.name)) {
           results.push(fullPath);
         }
       }
       return results;
     }
 
-    const pdfList = findPdfs(resolvedDir, recursive);
+    const docList = findDocs(resolvedDir, recursive);
 
-    if (pdfList.length === 0) {
-      return `No PDFs found in ${resolvedDir}`;
+    if (docList.length === 0) {
+      return `No PDF or Markdown files found in ${resolvedDir}`;
     }
 
     const results: string[] = [];
 
-    for (const pdfPath of pdfList) {
+    for (const docPath of docList) {
       // Check for abort between iterations
       if (ctx?.abort?.aborted) {
-        results.push("\n\nOperation cancelled - remaining PDFs not processed");
+        results.push("\n\nOperation cancelled - remaining files not processed");
         break;
       }
 
-      const title = basename(pdfPath, ".pdf");
+      const title = basename(docPath, extname(docPath));
       try {
-        const args = ["add", pdfPath];
+        const args = ["add", docPath];
         if (tags) args.push("--tags", tags);
 
         const result = await runCli(args, EMBEDDING_TIMEOUT_MS, ctx?.abort);
@@ -267,6 +357,6 @@ export const batch_add = tool({
       }
     }
 
-    return `# Batch Add Results (${pdfList.length} PDFs)\n\n${results.join("\n")}`;
+    return `# Batch Add Results (${docList.length} documents)\n\n${results.join("\n")}`;
   },
 });
