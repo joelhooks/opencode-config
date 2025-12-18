@@ -905,7 +905,7 @@ The `ctx.metadata()` streaming API is **only available to OpenCode's built-in to
 
 1. **Return progress in final output** - accumulate status and return comprehensive summary
 2. **Use Agent Mail for coordination** - send progress messages to other agents
-3. **Use beads_update** - update bead descriptions with progress checkpoints
+3. **Use hive_update** - update cell descriptions with progress checkpoints
 
 ### Example: How Built-in Tools Use It
 

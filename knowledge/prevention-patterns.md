@@ -1284,10 +1284,10 @@ When you discover a new preventable error pattern:
 4. **Create bead template**: What's the actionable task title?
 5. **Add to this file**: Follow the format above
 
-Then create a bead to track adding it:
+Then create a cell to track adding it:
 
 ```bash
-beads_create({
+hive_create({
   title: "Prevention pattern: [error type]",
   type: "chore",
   description: "Add [error] to prevention-patterns.md with prevention actions"

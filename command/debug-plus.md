@@ -118,13 +118,13 @@ Example prevention swarms:
 - "Add null guards to all API response handlers"
 - "Add input validation to all form handlers"
 
-## Step 6: Create Prevention Beads
+## Step 6: Create Prevention Cells
 
-Even without spawning a swarm, always create a bead for preventive work:
+Even without spawning a swarm, always create a cell for preventive work:
 
 ```
-beads_create(
-  title="<Example Bead from prevention-patterns.md>",
+hive_create(
+  title="<Example Cell from prevention-patterns.md>",
   type="task",
   priority=<Priority from pattern>,
   description="Prevention for: <original error>\n\nAction: <Prevention Action>"
@@ -144,7 +144,7 @@ If this was a novel pattern not in prevention-patterns.md:
 
 **Prevention Action:** <what would prevent this>
 
-**Example Bead:** `<suggested bead title>`
+**Example Cell:** `<suggested cell title>`
 
 **Priority:** <0-3>
 

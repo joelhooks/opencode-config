@@ -41,8 +41,8 @@
     "external_directory": "allow",
     // Only deny the truly catastrophic - everything else just runs
     "bash": {
-      "git push": "ask",  // Confirm before pushing (prevent wrong branch accidents)
-      "git push *": "ask",
+      "git push": "allow",
+      "git push *": "allow",
       "sudo *": "deny",
       "rm -rf /": "deny",
       "rm -rf /*": "deny",
@@ -80,6 +80,14 @@
     "snyk": {
       "type": "local",
       "command": ["npx", "-y", "snyk@latest", "mcp", "-t", "stdio"]
+    },
+    // Kernel - cloud browser automation, Playwright execution, app deployment
+    // OAuth auth - run `opencode mcp auth kernel` to authenticate
+    "kernel": {
+      "type": "remote",
+      "transport": "http",
+      "url": "https://mcp.onkernel.com/mcp",
+      "oauth": {}
     }
   },
   

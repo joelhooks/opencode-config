@@ -82,23 +82,23 @@ swarm --version
 │ WORKFLOW           │                                              │
 ├────────────────────┼──────────────────────────────────────────────┤
 │ /iterate <task>    │ Evaluator-optimizer loop until quality met   │
-│ /fix-all           │ Survey PRs + beads, dispatch agents          │
+│ /fix-all           │ Survey PRs + cells, dispatch agents          │
 │ /sweep             │ Codebase cleanup pass                        │
-│ /focus <bead-id>   │ Start focused session on specific bead       │
+│ /focus <cell-id>   │ Start focused session on specific cell       │
 │ /rmslop            │ Remove AI code slop from branch              │
 ├────────────────────┼──────────────────────────────────────────────┤
 │ GIT                │                                              │
 ├────────────────────┼──────────────────────────────────────────────┤
 │ /commit            │ Smart commit with conventional format        │
-│ /pr-create         │ Create PR with beads linking                 │
+│ /pr-create         │ Create PR with cell linking                  │
 │ /worktree-task     │ Create git worktree for isolated work        │
 ├────────────────────┼──────────────────────────────────────────────┤
 │ SESSION            │                                              │
 ├────────────────────┼──────────────────────────────────────────────┤
-│ /handoff           │ End session, sync beads, generate continue   │
+│ /handoff           │ End session, sync hive, generate continue    │
 │ /checkpoint        │ Compress context, summarize session          │
 │ /context-dump      │ Dump state for context recovery              │
-│ /retro <bead-id>   │ Post-mortem: extract learnings               │
+│ /retro <cell-id>   │ Post-mortem: extract learnings               │
 │ /review-my-shit    │ Pre-PR self-review                           │
 ├────────────────────┼──────────────────────────────────────────────┤
 │ EXPLORE            │                                              │
@@ -130,11 +130,11 @@ swarm --version
 
 ### Plugin Tools (from `opencode-swarm-plugin`)
 
-**Beads** (git-backed issue tracking):
+**Hive** (git-backed issue tracking):
 
 ```
-beads_create, beads_create_epic, beads_query, beads_update,
-beads_close, beads_start, beads_ready, beads_sync
+hive_create, hive_create_epic, hive_query, hive_update,
+hive_close, hive_start, hive_ready, hive_sync
 ```
 
 **Swarm Mail** (multi-agent coordination):
@@ -167,7 +167,7 @@ skills_list, skills_use, skills_read, skills_create
 ├─────────────────┼───────────────────┼────────────────────────────────┤
 │ swarm/planner   │ claude-sonnet-4-5 │ Strategic task decomposition   │
 │ swarm/worker    │ claude-sonnet-4-5 │ Parallel task implementation   │
-│ beads           │ claude-haiku      │ Issue tracker (locked down)    │
+│ hive            │ claude-haiku      │ Issue tracker (locked down)    │
 │ archaeologist   │ claude-sonnet-4-5 │ Read-only codebase exploration │
 │ explore         │ claude-haiku-4-5  │ Fast search, pattern discovery │
 │ refactorer      │ default           │ Pattern migration              │
@@ -220,13 +220,24 @@ skills_use(name="cli-builder", context="building a new CLI tool")
 
 Configured in `opencode.jsonc`:
 
-| Server            | Purpose                               |
-| ----------------- | ------------------------------------- |
-| `next-devtools`   | Next.js dev server integration        |
-| `chrome-devtools` | Browser automation, DOM inspection    |
-| `context7`        | Library documentation lookup          |
-| `fetch`           | Web fetching with markdown conversion |
-| `snyk`            | Security scanning (SCA, SAST, IaC)    |
+| Server            | Purpose                                      |
+| ----------------- | -------------------------------------------- |
+| `next-devtools`   | Next.js dev server integration               |
+| `chrome-devtools` | Browser automation, DOM inspection           |
+| `context7`        | Library documentation lookup                 |
+| `fetch`           | Web fetching with markdown conversion        |
+| `snyk`            | Security scanning (SCA, SAST, IaC)           |
+| `kernel`          | Cloud browsers, Playwright execution (OAuth) |
+
+### Kernel Setup
+
+Kernel requires OAuth authentication:
+
+```bash
+opencode mcp auth kernel
+```
+
+This opens a browser for Kernel login. Credentials are stored locally and auto-refreshed.
 
 ---
 
@@ -236,7 +247,7 @@ Configured in `opencode.jsonc`:
 
 Thin wrapper that shells out to `swarm` CLI. Provides:
 
-- Beads tools (issue tracking)
+- Hive tools (issue tracking)
 - Swarm Mail tools (agent coordination)
 - Swarm tools (parallel orchestration)
 - Skills tools (knowledge injection)
@@ -250,7 +261,7 @@ Plays macOS system sounds on events:
 - `session.idle` → Ping
 - `swarm_complete` success → Glass
 - `swarm_abort` → Basso (error)
-- `beads_sync` success → Glass
+- `hive_sync` success → Glass
 
 ---
 
@@ -300,7 +311,7 @@ The swarm plugin learns from outcomes:
 1. Queries CASS for similar past tasks
 2. Selects strategy (file/feature/risk-based)
 3. Decomposes into parallelizable subtasks
-4. Creates epic + subtasks via `beads_create_epic`
+4. Creates epic + subtasks via `hive_create_epic`
 5. Spawns `swarm/worker` agents with file reservations
 6. Workers communicate via Swarm Mail
 7. `swarm_complete` runs UBS scan before closing
@@ -311,7 +322,7 @@ The swarm plugin learns from outcomes:
 **NON-NEGOTIABLE** - the plane is not landed until push succeeds:
 
 ```bash
-beads_sync()    # Sync to git
+hive_sync()     # Sync to git
 git push        # Push to remote
 git status      # Verify "up to date with origin"
 ```
@@ -332,8 +343,8 @@ Plugin tools enforce hard limits:
 {
   "permission": {
     "bash": {
-      "git push": "ask", // Confirm before pushing
-      "git push *": "ask",
+      "git push": "allow",
+      "git push *": "allow",
       "sudo *": "deny",
       "rm -rf /": "deny",
       "rm -rf ~": "deny",
