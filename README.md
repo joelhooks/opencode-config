@@ -16,9 +16,11 @@
 
 **A swarm of agents that learns from its mistakes.**
 
-You tell it what to build. It decomposes the work, spawns parallel workers, tracks what strategies work, and adapts. Anti-patterns get detected. Proven patterns get promoted. Confidence decays unless revalidated.
+An [OpenCode](https://opencode.ai) configuration that turns Claude into a multi-agent system. You describe what you want. It decomposes the work, spawns parallel workers, tracks what strategies work, and adapts. Anti-patterns get detected. Proven patterns get promoted. Confidence decays unless revalidated.
 
 Built on [`joelhooks/swarmtools`](https://github.com/joelhooks/swarmtools) - multi-agent orchestration with outcome-based learning.
+
+> **This is an OpenCode config, not a standalone tool.** Everything runs inside OpenCode. The CLIs (`swarm`, `semantic-memory`, `cass`) are backends that agents call - not meant for direct human use.
 
 ---
 
@@ -33,8 +35,10 @@ cd ~/.config/opencode && pnpm install
 
 ### 2. Install CLI Tools
 
+These CLIs are backends that OpenCode agents call. You install them, but the agents use them.
+
 ```bash
-# Swarm orchestration (required)
+# Swarm orchestration (required) - agents call this for coordination
 npm install -g opencode-swarm-plugin
 swarm --version  # 0.30.0+
 
@@ -61,11 +65,18 @@ swarm doctor
 
 ### 4. Run Your First Swarm
 
-```bash
+> **IMPORTANT:** All commands run inside [OpenCode](https://opencode.ai), not in your terminal.
+> The `swarm` CLI is a backend that OpenCode's agents call - it's not meant for direct human use.
+
+Start OpenCode, then type:
+
+```
 /swarm "Add user authentication with OAuth"
 ```
 
 Watch it decompose → spawn workers → coordinate → verify → learn.
+
+The agent orchestrates everything. You just describe what you want.
 
 ---
 
