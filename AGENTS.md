@@ -118,11 +118,14 @@ The `opencode-swarm-plugin` provides type-safe, context-preserving wrappers. Alw
 **Semantic Memory** (persistent learning):
 | Tool | Purpose |
 |------|---------|
-| `semantic-memory_find` | Search memories by semantic similarity |
-| `semantic-memory_store` | Store learnings with metadata |
+| `semantic-memory_find` | Search memories by semantic similarity (use `expand=true` for full content) |
+| `semantic-memory_store` | Store learnings with metadata and tags |
+| `semantic-memory_get` | Get a specific memory by ID |
+| `semantic-memory_remove` | Delete outdated/incorrect memories |
 | `semantic-memory_validate` | Validate memory accuracy (resets decay) |
 | `semantic-memory_list` | List stored memories |
 | `semantic-memory_stats` | Show memory statistics |
+| `semantic-memory_migrate` | Migrate database (PGlite 0.2.x → 0.3.x) |
 
 ### Other Custom Tools
 
@@ -944,10 +947,19 @@ Store and retrieve learnings across sessions. Memories persist and are searchabl
 
 ```bash
 # Store a learning (include WHY, not just WHAT)
-semantic-memory_store(information="OAuth refresh tokens need 5min buffer before expiry to avoid race conditions", metadata="auth, tokens, oauth")
+semantic-memory_store(information="OAuth refresh tokens need 5min buffer before expiry to avoid race conditions", tags="auth,tokens,oauth")
 
-# Search for relevant memories
+# Search for relevant memories (truncated preview by default)
 semantic-memory_find(query="token refresh", limit=5)
+
+# Search with full content (when you need details)
+semantic-memory_find(query="token refresh", limit=5, expand=true)
+
+# Get a specific memory by ID
+semantic-memory_get(id="mem_123")
+
+# Delete outdated/incorrect memory
+semantic-memory_remove(id="mem_456")
 
 # Validate a memory is still accurate (resets decay timer)
 semantic-memory_validate(id="mem_123")
