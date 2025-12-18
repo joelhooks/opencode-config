@@ -288,7 +288,7 @@ semantic-memory_find(query="token refresh", expand=true)  # Full content
 
 - `repo-autopsy_*` - Deep GitHub repo analysis (AST grep, blame, hotspots, secrets)
 - `repo-crawl_*` - GitHub API exploration (README, files, search)
-- `pdf-brain_*` - PDF knowledge base with semantic search
+- `pdf-brain_*` - PDF & Markdown knowledge base (URLs supported, `--expand` for context)
 - `typecheck` - TypeScript check with grouped errors
 - `git-context` - Branch, status, commits in one call
 
