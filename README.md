@@ -456,24 +456,121 @@ Every debugging session becomes a codebase improvement opportunity. Errors don't
 
 ---
 
-## Prerequisites
+## Installation
 
-| Requirement   | Purpose                                          |
-| ------------- | ------------------------------------------------ |
-| OpenCode 1.0+ | Plugin host                                      |
-| Node.js 18+   | Runtime                                          |
-| `swarm` CLI   | Orchestration (`npm i -g opencode-swarm-plugin`) |
-| Ollama        | Local embeddings for semantic-memory, pdf-brain  |
+### Core Requirements
 
-### Kernel Setup (Optional)
+| Tool     | Version | Purpose         |
+| -------- | ------- | --------------- |
+| OpenCode | 1.0+    | Plugin host     |
+| Node.js  | 18+     | Runtime         |
+| pnpm     | 8+      | Package manager |
 
-For cloud browser automation:
+### Step 1: Clone Config
+
+```bash
+git clone https://github.com/joelhooks/opencode-config ~/.config/opencode
+cd ~/.config/opencode && pnpm install
+```
+
+### Step 2: Install Swarm CLI
+
+```bash
+npm install -g opencode-swarm-plugin
+
+# Verify
+swarm --version  # Should show 0.30.0+
+```
+
+The swarm CLI provides:
+
+- Hive (git-backed work tracking)
+- Agent Mail (multi-agent coordination)
+- Swarm orchestration (decompose, spawn, verify)
+- Skills system (knowledge injection)
+
+### Step 3: Install Ollama (for AI features)
+
+Ollama powers local embeddings for semantic memory and PDF search.
+
+```bash
+# macOS
+brew install ollama
+
+# Linux
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Start the service
+ollama serve
+
+# Pull the embedding model
+ollama pull nomic-embed-text
+
+# Verify
+ollama --version  # Should show 0.13.0+
+```
+
+### Step 4: Install Semantic Memory CLI
+
+```bash
+npm install -g semantic-memory
+
+# Verify Ollama connection
+semantic-memory check
+```
+
+### Step 5: Install CASS (Cross-Agent Session Search)
+
+```bash
+npm install -g cass-search
+
+# Build the index (searches Claude, Cursor, Codex, etc.)
+cass index
+
+# Verify
+cass --version  # Should show 0.1.35+
+```
+
+### Step 6: Verify Everything
+
+```bash
+# Run swarm doctor to check all dependencies
+swarm doctor
+```
+
+### Optional: Kernel Cloud Browser
+
+For cloud browser automation (Playwright in the cloud):
 
 ```bash
 opencode mcp auth kernel
 ```
 
 Opens browser for OAuth. Credentials stored locally and auto-refreshed.
+
+### Optional: Snyk Security Scanning
+
+For vulnerability scanning (SCA, SAST, IaC, containers):
+
+```bash
+# Authenticate with Snyk
+snyk auth
+```
+
+---
+
+## Version Reference
+
+Current tested versions:
+
+| Tool            | Version | Install Command                  |
+| --------------- | ------- | -------------------------------- |
+| swarm           | 0.30.0  | `npm i -g opencode-swarm-plugin` |
+| semantic-memory | latest  | `npm i -g semantic-memory`       |
+| cass            | 0.1.35  | `npm i -g cass-search`           |
+| ollama          | 0.13.1  | `brew install ollama`            |
+
+**Embedding model:** `nomic-embed-text` (required for semantic-memory and pdf-brain)
 
 ---
 

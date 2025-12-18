@@ -73,7 +73,11 @@ async function execTool(
             );
           } else if (!result.success && result.error) {
             // Tool returned an error in JSON format
-            reject(new Error(result.error.message || "Tool execution failed"));
+            // Handle both string errors and object errors with .message
+            const errorMsg = typeof result.error === "string" 
+              ? result.error 
+              : (result.error.message || "Tool execution failed");
+            reject(new Error(errorMsg));
           } else {
             resolve(stdout);
           }
@@ -89,11 +93,11 @@ async function execTool(
         try {
           const result = JSON.parse(stdout);
           if (!result.success && result.error) {
-            reject(
-              new Error(
-                result.error.message || `Tool failed with code ${code}`,
-              ),
-            );
+            // Handle both string errors and object errors with .message
+            const errorMsg = typeof result.error === "string"
+              ? result.error
+              : (result.error.message || `Tool failed with code ${code}`);
+            reject(new Error(errorMsg));
           } else {
             reject(
               new Error(stderr || stdout || `Tool failed with code ${code}`),
@@ -884,14 +888,32 @@ const skills_execute = tool({
 // =============================================================================
 
 /**
+ * Detection result with confidence level
+ */
+interface SwarmDetection {
+  detected: boolean;
+  confidence: "high" | "medium" | "low" | "none";
+  reasons: string[];
+}
+
+/**
  * Check for swarm sign - evidence a swarm passed through
  *
- * Like deer scat on a trail, we look for traces:
- * - In-progress beads (active work)
- * - Open beads with parent_id (subtasks of an epic)
- * - Unclosed epics
+ * Uses multiple signals with different confidence levels:
+ * - HIGH: in_progress cells (active work)
+ * - MEDIUM: Open subtasks, unclosed epics, recently updated cells
+ * - LOW: Any cells exist
+ *
+ * Philosophy: Err on the side of continuation.
+ * False positive = extra context (low cost)
+ * False negative = lost swarm (high cost)
  */
-async function hasSwarmSign(): Promise<boolean> {
+async function detectSwarm(): Promise<SwarmDetection> {
+  const reasons: string[] = [];
+  let highConfidence = false;
+  let mediumConfidence = false;
+  let lowConfidence = false;
+
   try {
     const result = await new Promise<{ exitCode: number; stdout: string }>(
       (resolve) => {
@@ -909,24 +931,82 @@ async function hasSwarmSign(): Promise<boolean> {
       },
     );
 
-    if (result.exitCode !== 0) return false;
+    if (result.exitCode !== 0) {
+      return { detected: false, confidence: "none", reasons: ["hive_query failed"] };
+    }
 
-    const beads = JSON.parse(result.stdout);
-    if (!Array.isArray(beads)) return false;
+    const cells = JSON.parse(result.stdout);
+    if (!Array.isArray(cells) || cells.length === 0) {
+      return { detected: false, confidence: "none", reasons: ["no cells found"] };
+    }
 
-    // Look for swarm sign:
-    // 1. Any in_progress beads
-    // 2. Any open beads with a parent (subtasks)
-    // 3. Any epics that aren't closed
-    return beads.some(
-      (b: { status: string; parent_id?: string; type?: string }) =>
-        b.status === "in_progress" ||
-        (b.status === "open" && b.parent_id) ||
-        (b.type === "epic" && b.status !== "closed"),
+    // HIGH: Any in_progress cells
+    const inProgress = cells.filter(
+      (c: { status: string }) => c.status === "in_progress"
     );
+    if (inProgress.length > 0) {
+      highConfidence = true;
+      reasons.push(`${inProgress.length} cells in_progress`);
+    }
+
+    // MEDIUM: Open subtasks (cells with parent_id)
+    const subtasks = cells.filter(
+      (c: { status: string; parent_id?: string }) =>
+        c.status === "open" && c.parent_id
+    );
+    if (subtasks.length > 0) {
+      mediumConfidence = true;
+      reasons.push(`${subtasks.length} open subtasks`);
+    }
+
+    // MEDIUM: Unclosed epics
+    const openEpics = cells.filter(
+      (c: { status: string; type?: string }) =>
+        c.type === "epic" && c.status !== "closed"
+    );
+    if (openEpics.length > 0) {
+      mediumConfidence = true;
+      reasons.push(`${openEpics.length} unclosed epics`);
+    }
+
+    // MEDIUM: Recently updated cells (last hour)
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    const recentCells = cells.filter(
+      (c: { updated_at?: number }) => c.updated_at && c.updated_at > oneHourAgo
+    );
+    if (recentCells.length > 0) {
+      mediumConfidence = true;
+      reasons.push(`${recentCells.length} cells updated in last hour`);
+    }
+
+    // LOW: Any cells exist at all
+    if (cells.length > 0) {
+      lowConfidence = true;
+      reasons.push(`${cells.length} total cells in hive`);
+    }
   } catch {
-    return false;
+    // Detection failed, use fallback
+    lowConfidence = true;
+    reasons.push("Detection error, using fallback");
   }
+
+  // Determine overall confidence
+  let confidence: "high" | "medium" | "low" | "none";
+  if (highConfidence) {
+    confidence = "high";
+  } else if (mediumConfidence) {
+    confidence = "medium";
+  } else if (lowConfidence) {
+    confidence = "low";
+  } else {
+    confidence = "none";
+  }
+
+  return {
+    detected: confidence !== "none",
+    confidence,
+    reasons,
+  };
 }
 
 /**
@@ -990,6 +1070,47 @@ Extract from session context:
 - **Don't stop** - The swarm runs until the epic is closed
 
 **You are not waiting for instructions. You are the coordinator. Coordinate.**
+`;
+
+/**
+ * Fallback detection prompt - tells the compactor what to look for
+ * 
+ * Used when we can't definitively detect a swarm but want to be safe.
+ * The compactor can check the conversation context for these patterns.
+ */
+const SWARM_DETECTION_FALLBACK = `## 🐝 Swarm Detection - Check Your Context
+
+**IMPORTANT:** Before summarizing, check if this session involves an active swarm.
+
+Look for ANY of these patterns in the conversation:
+
+### Tool Calls (definite swarm sign)
+- \`swarm_decompose\`, \`swarm_spawn_subtask\`, \`swarm_status\`, \`swarm_complete\`
+- \`swarmmail_init\`, \`swarmmail_reserve\`, \`swarmmail_send\`
+- \`hive_create_epic\`, \`hive_start\`, \`hive_close\`
+
+### IDs and Names
+- Cell IDs: \`bd-xxx\`, \`bd-xxx.N\` (subtask format)
+- Agent names: BlueLake, RedMountain, GreenValley, etc.
+- Epic references: "epic", "subtask", "parent"
+
+### Coordination Language
+- "spawn", "worker", "coordinator"
+- "reserve", "reservation", "files"
+- "blocked", "unblock", "dependency"
+- "progress", "complete", "in_progress"
+
+### If You Find Swarm Evidence
+
+Include this in your summary:
+1. Epic ID and title
+2. Project path
+3. Subtask status (running/blocked/done/pending)
+4. Any blockers or issues
+5. What should happen next
+
+**Then tell the resumed session:**
+"This is an active swarm. Check swarm_status and swarmmail_inbox immediately."
 `;
 
 // Extended hooks type to include experimental compaction hook
@@ -1065,15 +1186,23 @@ export const SwarmPlugin: Plugin = async (
       skills_execute,
     },
 
-    // Swarm-aware compaction hook - only fires if there's an active swarm
+    // Swarm-aware compaction hook - injects context based on detection confidence
     "experimental.session.compacting": async (
       _input: { sessionID: string },
       output: { context: string[] },
     ) => {
-      const hasSign = await hasSwarmSign();
-      if (hasSign) {
-        output.context.push(SWARM_COMPACTION_CONTEXT);
+      const detection = await detectSwarm();
+
+      if (detection.confidence === "high" || detection.confidence === "medium") {
+        // Definite or probable swarm - inject full context
+        const header = `[Swarm detected: ${detection.reasons.join(", ")}]\n\n`;
+        output.context.push(header + SWARM_COMPACTION_CONTEXT);
+      } else if (detection.confidence === "low") {
+        // Possible swarm - inject fallback detection prompt
+        const header = `[Possible swarm: ${detection.reasons.join(", ")}]\n\n`;
+        output.context.push(header + SWARM_DETECTION_FALLBACK);
       }
+      // confidence === "none" - no injection, probably not a swarm
     },
   };
 };
