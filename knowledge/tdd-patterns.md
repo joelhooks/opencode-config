@@ -221,6 +221,56 @@ const processor = new OrderProcessor(fakeDb);
 
 ## Anti-Patterns
 
+### ❌ Overspecified Tests (THE WORST)
+
+> "Mocks have their place, but excess mocking breaks encapsulation and tests a mechanism rather than a behavior." — Adam Tornhill, _Software Design X-Rays_
+
+Overspecified tests are **brittle garbage** that:
+
+- Break on every refactor even when behavior is unchanged
+- Test implementation details instead of outcomes
+- Create false confidence (tests pass but code is wrong)
+- Make refactoring terrifying instead of safe
+
+**Symptoms:**
+
+```typescript
+// ❌ OVERSPECIFIED - tests HOW, not WHAT
+test("saves user", () => {
+  const mockDb = { query: jest.fn() };
+  const mockLogger = { info: jest.fn() };
+  const mockValidator = { validate: jest.fn().mockReturnValue(true) };
+
+  saveUser({ name: "Joel" }, mockDb, mockLogger, mockValidator);
+
+  expect(mockValidator.validate).toHaveBeenCalledWith({ name: "Joel" });
+  expect(mockDb.query).toHaveBeenCalledWith(
+    "INSERT INTO users (name) VALUES (?)",
+    ["Joel"],
+  );
+  expect(mockLogger.info).toHaveBeenCalledWith("User saved: Joel");
+});
+// Change ANY internal detail and this test breaks
+// Even if the user still gets saved correctly!
+
+// ✅ BEHAVIOR-FOCUSED - tests WHAT, not HOW
+test("saves user and can retrieve them", async () => {
+  await saveUser({ name: "Joel" });
+
+  const user = await getUser("Joel");
+  expect(user.name).toBe("Joel");
+});
+// Refactor internals freely - test only breaks if behavior breaks
+```
+
+**The Fix:**
+
+- Test **observable behavior**, not internal mechanics
+- Ask: "If I refactor the implementation, should this test break?"
+- If the answer is "no" but it would break → overspecified
+- Prefer integration tests over unit tests with heavy mocking
+- Mock at boundaries (network, filesystem), not between your own classes
+
 ### ❌ Writing Tests After Code
 
 - You don't know if the test can fail
@@ -250,6 +300,67 @@ const processor = new OrderProcessor(fakeDb);
 - "I'll just clean this up real quick"
 - No safety net
 - Bugs introduced silently
+
+---
+
+## What Good Tests Look Like
+
+> "Think about letting the code in the test be a mirror of the test description." — Corey Haines, _4 Rules of Simple Design_
+
+### Test Behavior, Not Implementation
+
+```typescript
+// ✅ GOOD: Tests the contract
+test("cart calculates total with tax", () => {
+  const cart = new Cart();
+  cart.add({ price: 100 });
+  cart.add({ price: 50 });
+
+  expect(cart.totalWithTax(0.1)).toBe(165);
+});
+
+// ❌ BAD: Tests internal structure
+test("cart stores items in array and calls tax calculator", () => {
+  const cart = new Cart();
+  cart.add({ price: 100 });
+
+  expect(cart.items).toHaveLength(1);
+  expect(cart.taxCalculator.calculate).toHaveBeenCalled();
+});
+```
+
+### The "Refactor Test"
+
+Before committing a test, ask: **"If I completely rewrote the implementation but kept the same behavior, would this test still pass?"**
+
+- If yes → good test
+- If no → you're testing implementation details
+
+### Mock Boundaries, Not Internals
+
+```typescript
+// ✅ Mock external boundaries
+const mockFetch = jest.fn().mockResolvedValue({ data: "..." });
+// Network is a boundary - mock it
+
+// ❌ Don't mock your own classes
+const mockUserService = { getUser: jest.fn() };
+// This is YOUR code - use the real thing or you're not testing anything
+```
+
+### Test Names Are Documentation
+
+```typescript
+// ✅ Describes behavior
+test("rejects passwords shorter than 8 characters");
+test("sends welcome email after successful registration");
+test("returns cached result when called within TTL");
+
+// ❌ Describes implementation
+test("calls validatePassword method");
+test("uses EmailService");
+test("checks cache map");
+```
 
 ---
 
