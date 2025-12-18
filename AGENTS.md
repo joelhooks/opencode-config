@@ -2,6 +2,33 @@
 
 Joel Hooks - co-founder of egghead.io, education at Vercel, builds badass courses via Skill Recordings (Total TypeScript, Pro Tailwind). Deep background in bootstrapping, systems thinking, and developer education. Lives in the Next.js/React ecosystem daily - RSC, server components, suspense, streaming, caching. Skip the tutorials.
 
+---
+
+## TDD COMMANDMENT (NON-NEGOTIABLE)
+
+```
+┌─────────────────────────────────────────┐
+│     RED  →  GREEN  →  REFACTOR          │
+│                                         │
+│  Every feature. Every bug fix.          │
+│  No exceptions for swarm work.          │
+└─────────────────────────────────────────┘
+```
+
+1. **RED**: Write a failing test first. If it passes, your test is wrong.
+2. **GREEN**: Minimum code to pass. Hardcode if needed. Just make it green.
+3. **REFACTOR**: Clean up while green. Run tests after every change.
+
+**Bug fixes**: Write a test that reproduces the bug FIRST. Then fix it. The test prevents regression forever.
+
+**Legacy code**: Write characterization tests to document actual behavior before changing anything.
+
+**Full doctrine**: `@knowledge/tdd-patterns.md`
+**Dependency breaking**: `skills_use(name="testing-patterns")` — 25 techniques from Feathers
+**Source material**: `pdf-brain_search(query="Feathers seam")` or `pdf-brain_search(query="Beck TDD")`
+
+---
+
 <tool_preferences>
 
 **USE SWARM PLUGIN TOOLS - NOT RAW CLI/MCP**
@@ -262,8 +289,8 @@ swarm_complete(project_key="...", agent_name="BlueLake", bead_id="bd-123.1", sum
 
 ## Hive Workflow (via Plugin)
 
-<hive_context>
-Hive is a git-backed work item tracker. **Always use `hive_*` plugin tools, not raw `bd` CLI commands.** Plugin tools have type-safe validation and integrate with swarm learning.
+<hive*context>
+Hive is a git-backed work item tracker. \*\*Always use `hive*\*`plugin tools, not raw`bd` CLI commands.\*\* Plugin tools have type-safe validation and integrate with swarm learning.
 </hive_context>
 
 ### Absolute Rules
@@ -413,9 +440,9 @@ Swarm Mail is the ONLY way agents coordinate in parallel work. Silent agents cau
 | **About to modify files**   | `swarmmail_reserve()` with cell ID in reason       | Edit conflicts, lost work, angry coordinator                   |
 | **Blocked >5 minutes**      | `swarmmail_send(importance="high")` to coordinator | Wasted time, missed dependencies, swarm stalls                 |
 | **Every 30 min of work**    | `swarmmail_send()` progress update                 | Coordinator assumes you're stuck, may reassign work            |
-| **Scope expands**           | `swarmmail_send()` + `hive_update()` description  | Silent scope creep, integration failures                       |
+| **Scope expands**           | `swarmmail_send()` + `hive_update()` description   | Silent scope creep, integration failures                       |
 | **Found bug in dependency** | `swarmmail_send()` to owner, don't fix             | Duplicate work, conflicting fixes                              |
-| **Subtask complete**        | `swarm_complete()` (not `hive_close`)             | Reservations not released, learning data lost                  |
+| **Subtask complete**        | `swarm_complete()` (not `hive_close`)              | Reservations not released, learning data lost                  |
 
 ### Good vs Bad Usage
 
@@ -510,50 +537,60 @@ swarmmail_send(
 )
 # Wait for coordinator response before expanding
 ```
+
 swarmmail_send(
-  to=["coordinator"],
-  subject="Progress: <bead-id>",
-  body="<what's done, what's next, ETA>",
-  thread_id="<epic-id>"
+to=["coordinator"],
+subject="Progress: <bead-id>",
+body="<what's done, what's next, ETA>",
+thread_id="<epic-id>"
 )
+
 ```
 
 **Blockers** (immediately when stuck >5min):
 
 ```
+
 swarmmail_send(
-  to=["coordinator"],
-  subject="BLOCKED: <bead-id> - <short reason>",
-  body="<detailed blocker, what you need, who owns it>",
-  importance="high",
-  thread_id="<epic-id>"
+to=["coordinator"],
+subject="BLOCKED: <bead-id> - <short reason>",
+body="<detailed blocker, what you need, who owns it>",
+importance="high",
+thread_id="<epic-id>"
 )
 hive_update(id="<cell-id>", status="blocked")
+
 ```
 
 **Scope Changes**:
 
 ```
+
 swarmmail_send(
-  to=["coordinator"],
-  subject="Scope Change: <bead-id>",
-  body="Found X, suggests expanding to include Y. Adds ~15min. Proceed?",
-  thread_id="<epic-id>",
-  ack_required=true
+to=["coordinator"],
+subject="Scope Change: <bead-id>",
+body="Found X, suggests expanding to include Y. Adds ~15min. Proceed?",
+thread_id="<epic-id>",
+ack_required=true
 )
+
 # Wait for coordinator response before expanding
+
 ```
 
 **Cross-Agent Dependencies**:
 
 ```
+
 # Don't fix other agents' bugs - coordinate
+
 swarmmail_send(
-  to=["OtherAgent", "coordinator"],
-  subject="Potential issue in bd-123.1",
-  body="Auth service expects User.email but schema has User.emailAddress. Can you align?",
-  thread_id="bd-123"
+to=["OtherAgent", "coordinator"],
+subject="Potential issue in bd-123.1",
+body="Auth service expects User.email but schema has User.emailAddress. Can you align?",
+thread_id="bd-123"
 )
+
 ```
 
 ### File Reservation Strategy
@@ -561,32 +598,40 @@ swarmmail_send(
 **Reserve early, release late:**
 
 ```
+
 # Reserve at START of work
+
 swarmmail_reserve(
-  paths=["src/auth/**", "src/lib/jwt.ts"],
-  reason="bd-123.2: Auth service",
-  ttl_seconds=3600  # 1 hour
+paths=["src/auth/**", "src/lib/jwt.ts"],
+reason="bd-123.2: Auth service",
+ttl_seconds=3600 # 1 hour
 )
 
 # Work...
 
 # Release via swarm_complete (automatic)
-swarm_complete(...)  # Releases all your reservations
+
+swarm_complete(...) # Releases all your reservations
+
 ```
 
 **Requesting access to reserved files:**
 
 ```
+
 # Check who owns reservation
-swarmmail_inbox()  # Shows active reservations in system messages
+
+swarmmail_inbox() # Shows active reservations in system messages
 
 # Request access
+
 swarmmail_send(
-  to=["OtherAgent"],
-  subject="Need access to src/lib/jwt.ts",
-  body="Need to add refresh token method. Can you release or should I wait?",
-  importance="high"
+to=["OtherAgent"],
+subject="Need access to src/lib/jwt.ts",
+body="Need to add refresh token method. Can you release or should I wait?",
+importance="high"
 )
+
 ```
 
 ### Integration with Hive
@@ -658,19 +703,24 @@ use JSDOC to document components and functions
 Examples of good PR vibes:
 
 ```
+
     🐝   SWARM MAIL   🐝
-   ━━━━━━━━━━━━━━━━━━━━
-   Actor-Model Primitives
+
+━━━━━━━━━━━━━━━━━━━━
+Actor-Model Primitives
+
 ```
 
 ```
+
 ┌─────────────────────────┐
-│  ARCHITECTURE DIAGRAM   │
+│ ARCHITECTURE DIAGRAM │
 ├─────────────────────────┤
-│  Layer 3: Coordination  │
-│  Layer 2: Patterns      │
-│  Layer 1: Primitives    │
+│ Layer 3: Coordination │
+│ Layer 2: Patterns │
+│ Layer 1: Primitives │
 └─────────────────────────┘
+
 ```
 
 PRs should make people want to click, read, and share.
@@ -803,10 +853,12 @@ Skills are reusable knowledge packages. Load them on-demand for specialized task
 ### Usage
 
 ```
-skills_list()                              # See available skills
-skills_use(name="swarm-coordination")      # Load a skill
+
+skills_list() # See available skills
+skills_use(name="swarm-coordination") # Load a skill
 skills_use(name="cli-builder", context="building a new CLI") # With context
-skills_read(name="mcp-tool-authoring")     # Read full skill content
+skills_read(name="mcp-tool-authoring") # Read full skill content
+
 ```
 
 ### Bundled Skills (Global - ship with plugin)
@@ -823,11 +875,13 @@ skills_read(name="mcp-tool-authoring")     # Read full skill content
 ### Skill Triggers (Auto-load these)
 
 ```
-Writing tests?           → skills_use(name="testing-patterns")
-Breaking dependencies?   → skills_use(name="testing-patterns")
-Multi-agent work?        → skills_use(name="swarm-coordination")
-Building a CLI?          → skills_use(name="cli-builder")
-```
+
+Writing tests? → skills_use(name="testing-patterns")
+Breaking dependencies? → skills_use(name="testing-patterns")
+Multi-agent work? → skills_use(name="swarm-coordination")
+Building a CLI? → skills_use(name="cli-builder")
+
+````
 
 **Pro tip:** `testing-patterns` has a full catalog of 25 dependency-breaking techniques in `references/dependency-breaking-catalog.md`. Gold for getting gnarly code under test.
 
@@ -865,7 +919,7 @@ cass_view(path="/path/to/session.jsonl", line=42)
 
 # Expand context around a line
 cass_expand(path="/path/to/session.jsonl", line=42, context=5)
-```
+````
 
 ### Token Budget
 
