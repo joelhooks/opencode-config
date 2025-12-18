@@ -14,12 +14,16 @@
     ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝     ╚═╝ ╚═════╝
 ```
 
+> _"These are intelligent and structured group dynamics that emerge not from a leader, but from the local interactions of the elements themselves."_
+> — Daniel Shiffman, _The Nature of Code_
+
 **A swarm of agents that learns from its mistakes.**
 
 An [OpenCode](https://opencode.ai) configuration that turns Claude into a multi-agent system. You describe what you want. It decomposes the work, spawns parallel workers, tracks what strategies work, and adapts. Anti-patterns get detected. Proven patterns get promoted. Confidence decays unless revalidated.
 
 Built on [`joelhooks/swarmtools`](https://github.com/joelhooks/swarmtools) - multi-agent orchestration with outcome-based learning.
 
+> [!IMPORTANT]
 > **This is an OpenCode config, not a standalone tool.** Everything runs inside OpenCode. The CLIs (`swarm`, `semantic-memory`, `cass`) are backends that agents call - not meant for direct human use.
 
 ---
@@ -35,7 +39,8 @@ cd ~/.config/opencode && pnpm install
 
 ### 2. Install CLI Tools
 
-These CLIs are backends that OpenCode agents call. You install them, but the agents use them.
+> [!NOTE]
+> These CLIs are backends that OpenCode agents call. You install them, but the agents use them.
 
 ```bash
 # Swarm orchestration (required) - agents call this for coordination
@@ -65,8 +70,8 @@ swarm doctor
 
 ### 4. Run Your First Swarm
 
-> **IMPORTANT:** All commands run inside [OpenCode](https://opencode.ai), not in your terminal.
-> The `swarm` CLI is a backend that OpenCode's agents call - it's not meant for direct human use.
+> [!WARNING]
+> All commands run **inside [OpenCode](https://opencode.ai)**, not in your terminal. The `swarm` CLI is a backend that agents call - it's not meant for direct human use.
 
 Start OpenCode, then type:
 
@@ -106,6 +111,9 @@ snyk auth
 ## What Makes This Different
 
 ### The Swarm Learns
+
+> _"Elaborate feedback on errors has repeatedly been found to be more effective than knowledge of results alone."_
+> — Jeroen van Merriënboer, _Ten Steps to Complex Learning_
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -319,6 +327,9 @@ semantic-memory_find(query="token refresh", expand=true)  # Full content
 
 ## Skills (On-Demand Knowledge)
 
+> _"Legacy code is simply code without tests."_
+> — Michael Feathers, _Working Effectively with Legacy Code_
+
 | Skill                  | When to Use                                                 |
 | ---------------------- | ----------------------------------------------------------- |
 | **testing-patterns**   | Adding tests, breaking dependencies, characterization tests |
@@ -332,6 +343,9 @@ semantic-memory_find(query="token refresh", expand=true)  # Full content
 skills_use(name="testing-patterns")
 skills_use(name="cli-builder", context="building a new CLI tool")
 ```
+
+> [!TIP]
+> `testing-patterns` includes 25 dependency-breaking techniques from Feathers' _Working Effectively with Legacy Code_. Gold for getting gnarly code under test.
 
 ---
 
@@ -381,3 +395,8 @@ Load via `@knowledge/file-name.md` references when relevant.
 ## License
 
 MIT
+
+---
+
+> _"One person's pattern can be another person's primitive building block."_
+> — Eric Evans, _Domain-Driven Design_
