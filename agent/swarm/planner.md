@@ -29,7 +29,7 @@ Synthesize findings - note relevant patterns, past approaches, and skills to rec
 
 `swarm_plan_prompt(task="<task>", context="<synthesized knowledge>")`
 
-### 4. Output BeadTree
+### 4. Output CellTree
 
 Return ONLY valid JSON - no markdown, no explanation:
 

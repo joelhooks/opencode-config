@@ -85,9 +85,7 @@
     // OAuth auth - run `opencode mcp auth kernel` to authenticate
     "kernel": {
       "type": "remote",
-      "transport": "http",
-      "url": "https://mcp.onkernel.com/mcp",
-      "oauth": {}
+      "url": "https://mcp.onkernel.com/mcp"
     }
   },
   
