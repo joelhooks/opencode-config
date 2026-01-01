@@ -21,7 +21,7 @@
 
 An [OpenCode](https://opencode.ai) configuration that turns Claude into a multi-agent system. You describe what you want. It decomposes the work, spawns parallel workers, tracks what strategies work, and adapts. Anti-patterns get detected. Proven patterns get promoted. Confidence decays unless revalidated.
 
-Built on [`joelhooks/swarmtools`](https://github.com/joelhooks/swarmtools) - multi-agent orchestration with outcome-based learning.
+Built on [`joelhooks/swarm-tools`](https://github.com/joelhooks/swarm-tools) - multi-agent orchestration with outcome-based learning.
 
 > [!IMPORTANT]
 > **This is an OpenCode config, not a standalone tool.** Everything runs inside OpenCode. The CLIs (`swarm`, `semantic-memory`, `cass`) are backends that agents call - not meant for direct human use.
@@ -211,7 +211,7 @@ Workers get disposable context. Coordinator context stays clean. Parallel work d
 ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝
 ```
 
-**Built on [`joelhooks/swarmtools`](https://github.com/joelhooks/swarmtools)** - the core innovation.
+**Built on [`joelhooks/swarm-tools`](https://github.com/joelhooks/swarm-tools)** - the core innovation.
 
 ### The System
 
@@ -386,7 +386,7 @@ Load via `@knowledge/file-name.md` references when relevant.
 
 ## Credits
 
-- **[joelhooks/swarmtools](https://github.com/joelhooks/swarmtools)** - The swarm orchestration core
+- **[joelhooks/swarm-tools](https://github.com/joelhooks/swarm-tools)** - The swarm orchestration core
 - **[nexxeln/opencode-config](https://github.com/nexxeln/opencode-config)** - `/rmslop`, notify plugin, Effect-TS patterns
 - **[OpenCode](https://opencode.ai)** - The foundation
 
