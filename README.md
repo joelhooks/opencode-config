@@ -24,7 +24,7 @@ An [OpenCode](https://opencode.ai) configuration that turns Claude into a multi-
 Built on [`joelhooks/swarmtools`](https://github.com/joelhooks/swarmtools) - multi-agent orchestration with outcome-based learning.
 
 > [!IMPORTANT]
-> **This is an OpenCode config, not a standalone tool.** Everything runs inside OpenCode. The CLIs (`swarm`, `semantic-memory`, `cass`) are backends that agents call - not meant for direct human use.
+> **This is an OpenCode config, not a standalone tool.** Everything runs inside OpenCode. The CLIs (`swarm`, `cass`) are backends that agents call - not meant for direct human use.
 
 ---
 
@@ -51,10 +51,6 @@ swarm --version  # 0.30.0+
 brew install ollama  # or: curl -fsSL https://ollama.com/install.sh | sh
 ollama serve
 ollama pull nomic-embed-text
-
-# Semantic memory (optional but recommended)
-npm install -g semantic-memory
-semantic-memory check
 
 # Cross-agent session search (optional but recommended)
 npm install -g cass-search
@@ -87,14 +83,13 @@ The agent orchestrates everything. You just describe what you want.
 
 ## Version Reference
 
-| Tool            | Version | Install Command                  |
-| --------------- | ------- | -------------------------------- |
-| swarm           | 0.30.0  | `npm i -g opencode-swarm-plugin` |
-| semantic-memory | latest  | `npm i -g semantic-memory`       |
-| cass            | 0.1.35  | `npm i -g cass-search`           |
-| ollama          | 0.13.1  | `brew install ollama`            |
+| Tool   | Version | Install Command                  |
+| ------ | ------- | -------------------------------- |
+| swarm  | 0.30.0  | `npm i -g opencode-swarm-plugin` |
+| cass   | 0.1.35  | `npm i -g cass-search`           |
+| ollama | 0.13.1  | `brew install ollama`            |
 
-**Embedding model:** `nomic-embed-text` (required for semantic-memory and pdf-brain)
+**Embedding model:** `nomic-embed-text` (required for hivemind and pdf-brain)
 
 ### Optional Integrations
 
@@ -276,12 +271,12 @@ cass_search(query="authentication error", limit=5)
 cass_search(query="useEffect cleanup", agent="claude", days=7)
 ```
 
-### Semantic Memory
+### Hivemind (Semantic Memory)
 
 ```bash
-semantic-memory_store(information="OAuth tokens need 5min buffer", tags="auth,tokens")
-semantic-memory_find(query="token refresh", limit=5)
-semantic-memory_find(query="token refresh", expand=true)  # Full content
+hivemind_store(information="OAuth tokens need 5min buffer", tags="auth,tokens")
+hivemind_find(query="token refresh", limit=5)
+hivemind_find(query="token refresh", expand=true)  # Full content
 ```
 
 ### Others

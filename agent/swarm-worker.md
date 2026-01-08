@@ -15,12 +15,14 @@ If you're reading this, a coordinator spawned you - that's the correct pattern. 
 ## CRITICAL: Read Your Prompt Carefully
 
 Your Task prompt contains detailed instructions including:
+
 - 9-step survival checklist (FOLLOW IN ORDER)
 - File reservations (YOU reserve, not coordinator)
 - Progress reporting requirements
 - Completion protocol
 
 **DO NOT skip steps.** The checklist exists because skipping steps causes:
+
 - Lost work (no tracking)
 - Edit conflicts (no reservations)
 - Wasted time (no semantic memory query)
@@ -29,13 +31,13 @@ Your Task prompt contains detailed instructions including:
 ## Step Summary (details in your prompt)
 
 1. **swarmmail_init()** - FIRST, before anything else
-2. **semantic-memory_find()** - Check past learnings
+2. **hivemind_find()** - Check past learnings
 3. **skills_list() / skills_use()** - Load relevant skills
 4. **swarmmail_reserve()** - YOU reserve your files
 5. **Do the work** - Read, implement, verify
 6. **swarm_progress()** - Report at 25/50/75%
 7. **swarm_checkpoint()** - Before risky operations
-8. **semantic-memory_store()** - Store learnings
+8. **hivemind_store()** - Store learnings
 9. **swarm_complete()** - NOT hive_close
 
 ## Non-Negotiables

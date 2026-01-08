@@ -178,9 +178,7 @@ The `opencode-swarm-plugin` provides type-safe, context-preserving wrappers. Alw
 
 ### Other Custom Tools
 
-- **cass_search, cass_view, cass_expand** - Search past agent sessions
-- **semantic-memory_find, semantic-memory_store, semantic-memory_validate** - Persistent learning across sessions
-
+- **cass_search, cass_view, cass_expand** - Search past agent sessions (use `hivemind_find` instead for unified interface)
 
 - **swarm_review, swarm_review_feedback** - Coordinator reviews worker output (3-strike rule)
 
@@ -1063,14 +1061,14 @@ Agents MUST proactively store learnings. The rule is simple: if you learned it t
 
 ### MANDATORY Triggers
 
-| Situation                        | Action                                               | Consequence of Non-Compliance                 |
-| -------------------------------- | ---------------------------------------------------- | --------------------------------------------- |
+| Situation                        | Action                                        | Consequence of Non-Compliance                 |
+| -------------------------------- | --------------------------------------------- | --------------------------------------------- |
 | **Debugging >30min**             | `hivemind_store()` with root cause + solution | Next agent wastes another 30min on same issue |
-| **Architectural decision**       | Store reasoning, alternatives, tradeoffs             | Future changes break assumptions, regression  |
-| **Project-specific pattern**     | Store domain rule with examples                      | Inconsistent implementations across codebase  |
-| **Tool/library gotcha**          | Store quirk + workaround                             | Repeated trial-and-error, wasted time         |
+| **Architectural decision**       | Store reasoning, alternatives, tradeoffs      | Future changes break assumptions, regression  |
+| **Project-specific pattern**     | Store domain rule with examples               | Inconsistent implementations across codebase  |
+| **Tool/library gotcha**          | Store quirk + workaround                      | Repeated trial-and-error, wasted time         |
 | **Before starting complex work** | `hivemind_find()` to check for learnings      | Reinventing wheels, ignoring past failures    |
-| **After /debug-plus success**    | Store prevention pattern if one was created          | Prevention patterns not reused, bugs recur    |
+| **After /debug-plus success**    | Store prevention pattern if one was created   | Prevention patterns not reused, bugs recur    |
 
 ### Good vs Bad Usage
 
