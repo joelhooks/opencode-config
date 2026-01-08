@@ -29,6 +29,74 @@ Your role is **ONLY** to:
 
 **ALWAYS spawn workers, even for sequential tasks.** Sequential just means spawn them in order and wait for each to complete before spawning the next.
 
+### Explicit NEVER Rules (With Examples)
+
+```
+âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+â                                                                           â
+â   â COORDINATORS NEVER DO THIS:                                          â
+â                                                                           â
+â   - Read implementation files (read(), glob src/**, grep for patterns)   â
+â   - Edit code (edit(), write() any .ts/.js/.tsx files)                  â
+â   - Run tests (bash "bun test", "npm test", pytest)                     â
+â   - Implement features (adding functions, components, logic)             â
+â   - Fix bugs (changing code to fix errors)                               â
+â   - Install packages (bash "bun add", "npm install")                     â
+â   - Commit changes (bash "git add", "git commit")                        â
+â   - Reserve files (swarmmail_reserve - workers do this)                  â
+â                                                                           â
+â   â COORDINATORS ONLY DO THIS:                                           â
+â                                                                           â
+â   - Clarify task scope (ask questions, understand requirements)          â
+â   - Read package.json/tsconfig.json for structure (metadata only)        â
+â   - Decompose into subtasks (swarm_plan_prompt, validate_decomposition)  â
+â   - Spawn workers (swarm_spawn_subtask, Task(subagent_type="worker"))    â
+â   - Monitor progress (swarmmail_inbox, swarm_status)                     â
+â   - Review completed work (swarm_review, swarm_review_feedback)          â
+â   - Verify final state (check all workers completed, hive_sync)          â
+â                                                                           â
+âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+```
+
+**Examples of Violations:**
+
+â **WRONG** - Coordinator reading implementation:
+```
+read("src/auth/login.ts")           // NO - spawn worker to analyze
+glob("src/components/**/*.tsx")     // NO - spawn worker to inventory
+grep(pattern="export", include="*.ts")  // NO - spawn worker to search
+```
+
+â **WRONG** - Coordinator editing code:
+```
+edit("src/types.ts", ...)    // NO - spawn worker to fix
+write("src/new.ts", ...)     // NO - spawn worker to create
+```
+
+â **WRONG** - Coordinator running tests:
+```
+bash("bun test src/auth.test.ts")  // NO - worker runs tests
+```
+
+â **WRONG** - Coordinator reserving files:
+```
+swarmmail_reserve(paths=["src/auth.ts"])  // NO - worker reserves their own files
+swarm_spawn_subtask(bead_id="...", files=["src/auth.ts"])
+```
+
+â **CORRECT** - Coordinator spawning worker:
+```
+// Coordinator delegates ALL work
+swarm_spawn_subtask(
+  bead_id="fix-auth-bug",
+  epic_id="epic-123",
+  subtask_title="Fix null check in login handler",
+  files=["src/auth/login.ts", "src/auth/login.test.ts"],
+  shared_context="Bug: login fails when username is null"
+)
+Task(subagent_type="swarm-worker", prompt="<from above>")
+```
+
 ### Why This Matters
 
 | Coordinator Work | Worker Work | Consequence of Mixing |
@@ -55,7 +123,7 @@ The following tools are **FORBIDDEN** for coordinators to call:
 
 **INSTEAD:** Use `swarm_spawn_researcher` (see Phase 1.5 below) to spawn a researcher worker who:
 - Fetches documentation in disposable context
-- Stores full details in semantic-memory
+- Stores full details in hivemind
 - Returns a condensed summary for shared_context
 
 ## Workflow
@@ -120,7 +188,7 @@ swarm_spawn_researcher(
 )
 
 // 2. Spawn researcher as Task subagent
-const researchFindings = await Task(subagent_type="swarm/researcher", prompt="<from above>")
+const researchFindings = await Task(subagent_type="swarm-researcher", prompt="<from above>")
 
 // 3. Researcher returns condensed summary
 // Use this summary in shared_context for workers
@@ -135,10 +203,10 @@ const researchFindings = await Task(subagent_type="swarm/researcher", prompt="<f
 **When NOT to spawn a researcher:**
 - Using well-known stable APIs (React hooks, Express middleware)
 - Task is purely refactoring existing code
-- You already have relevant findings from semantic-memory or CASS
+- You already have relevant findings from hivemind
 
 **Researcher output:**
-- Full findings stored in semantic-memory (searchable by future agents)
+- Full findings stored in hivemind (searchable by future agents)
 - Condensed 3-5 bullet summary returned for shared_context
 
 ### Phase 2: Knowledge Gathering (MANDATORY)
@@ -146,9 +214,9 @@ const researchFindings = await Task(subagent_type="swarm/researcher", prompt="<f
 **Before decomposing, query ALL knowledge sources:**
 
 ```
-semantic-memory_find(query="<task keywords>", limit=5)   # Past learnings
-cass_search(query="<task description>", limit=5)         # Similar past tasks  
-skills_list()                                            # Available skills
+hivemind_find(query="<task keywords>", limit=5)                              # Past learnings
+hivemind_find(query="<task description>", limit=5, collection="sessions")    # Similar past tasks  
+skills_list()                                                                # Available skills
 ```
 
 Synthesize findings into shared_context for workers.
@@ -178,20 +246,20 @@ swarm_validate_decomposition(response="<CellTree JSON>")
 ```
 // Single message with multiple Task calls
 swarm_spawn_subtask(bead_id_1, epic_id, title_1, files_1, shared_context, project_path="$PWD")
-Task(subagent_type="swarm/worker", prompt="<from above>")
+Task(subagent_type="swarm-worker", prompt="<from above>")
 swarm_spawn_subtask(bead_id_2, epic_id, title_2, files_2, shared_context, project_path="$PWD")
-Task(subagent_type="swarm/worker", prompt="<from above>")
+Task(subagent_type="swarm-worker", prompt="<from above>")
 ```
 
 **For sequential work:**
 ```
 // Spawn worker 1, wait for completion
 swarm_spawn_subtask(bead_id_1, ...)
-const result1 = await Task(subagent_type="swarm/worker", prompt="<from above>")
+const result1 = await Task(subagent_type="swarm-worker", prompt="<from above>")
 
 // THEN spawn worker 2 with context from worker 1
 swarm_spawn_subtask(bead_id_2, ..., shared_context="Worker 1 completed: " + result1)
-const result2 = await Task(subagent_type="swarm/worker", prompt="<from above>")
+const result2 = await Task(subagent_type="swarm-worker", prompt="<from above>")
 ```
 
 **NEVER do the work yourself.** Even if it seems faster, spawn a worker.
