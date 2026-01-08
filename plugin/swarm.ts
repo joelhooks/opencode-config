@@ -349,43 +349,193 @@ function logCompaction(
 }
 
 /**
- * Capture compaction event for evals via CLI
+ * Get date-stamped log file path
+ * Format: ~/.config/swarm-tools/logs/{type}-YYYY-MM-DD.log
+ */
+function getDateStampedLogPath(type: "tools" | "swarmmail" | "errors"): string {
+  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  return join(LOG_DIR, `${type}-${today}.log`);
+}
+
+/**
+ * Rotate old log files (delete files older than 7 days)
  * 
- * Shells out to `swarm capture` command to avoid import issues.
- * The CLI handles all the logic - plugin wrapper stays dumb.
+ * Runs silently - never breaks the plugin if rotation fails.
+ */
+function rotateLogFiles(): void {
+  try {
+    ensureLogDir();
+    const { readdirSync, unlinkSync, statSync } = require("node:fs");
+    const files = readdirSync(LOG_DIR);
+    const now = Date.now();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+    for (const file of files) {
+      // Only rotate date-stamped files (tools-*, swarmmail-*, errors-*)
+      if (!/^(tools|swarmmail|errors)-\d{4}-\d{2}-\d{2}\.log$/.test(file)) {
+        continue;
+      }
+
+      const filePath = join(LOG_DIR, file);
+      const stats = statSync(filePath);
+      const age = now - stats.mtimeMs;
+
+      if (age > sevenDaysMs) {
+        unlinkSync(filePath);
+      }
+    }
+  } catch {
+    // Silently fail - rotation failures shouldn't break the plugin
+  }
+}
+
+/**
+ * Log a tool invocation to date-stamped file
+ * 
+ * @param toolName - Tool name (e.g., "hive_create", "swarm_status")
+ * @param args - Tool arguments
+ * @param result - Tool result (optional, for successful calls)
+ * @param error - Error message (optional, for failed calls)
+ */
+function logTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  result?: string,
+  error?: string,
+): void {
+  try {
+    ensureLogDir();
+    rotateLogFiles(); // Rotate on every log call (cheap operation)
+
+    const logPath = getDateStampedLogPath("tools");
+    const entry = JSON.stringify({
+      time: new Date().toISOString(),
+      level: error ? "error" : "info",
+      msg: `tool_call: ${toolName}`,
+      tool: toolName,
+      args,
+      ...(result && { result }),
+      ...(error && { error }),
+    });
+
+    appendFileSync(logPath, entry + "\n");
+  } catch {
+    // Silently fail - logging should never break the plugin
+  }
+}
+
+/**
+ * Log a Swarm Mail event to date-stamped file
+ * 
+ * @param event - Event type (e.g., "message_sent", "inbox_fetched")
+ * @param data - Event data
+ */
+function logSwarmMail(
+  event: string,
+  data: Record<string, unknown>,
+): void {
+  try {
+    ensureLogDir();
+    rotateLogFiles();
+
+    const logPath = getDateStampedLogPath("swarmmail");
+    const entry = JSON.stringify({
+      time: new Date().toISOString(),
+      level: "info",
+      msg: event,
+      ...data,
+    });
+
+    appendFileSync(logPath, entry + "\n");
+  } catch {
+    // Silently fail
+  }
+}
+
+/**
+ * Log an error to date-stamped file
+ * 
+ * @param error - Error message
+ * @param data - Additional error context
+ */
+function logError(
+  error: string,
+  data?: Record<string, unknown>,
+): void {
+  try {
+    ensureLogDir();
+    rotateLogFiles();
+
+    const logPath = getDateStampedLogPath("errors");
+    const entry = JSON.stringify({
+      time: new Date().toISOString(),
+      level: "error",
+      msg: error,
+      ...data,
+    });
+
+    appendFileSync(logPath, entry + "\n");
+  } catch {
+    // Silently fail
+  }
+}
+
+/**
+ * Capture compaction event for evals (INLINED - do not import from opencode-swarm-plugin)
+ * 
+ * Writes COMPACTION events directly to session JSONL file.
+ * This is inlined to avoid import issues - plugin wrapper must be 100% self-contained.
+ * 
+ * Matches the structure of captureCompactionEvent from eval-capture.ts but writes
+ * ONLY to JSONL (not libSQL) to avoid swarm-mail dependency.
  * 
  * @param sessionID - Session ID
  * @param epicID - Epic ID (or "unknown" if not detected)
- * @param compactionType - Event type (detection_complete, prompt_generated, context_injected)
+ * @param compactionType - Event type (detection_complete, prompt_generated, context_injected, resumption_started, tool_call_tracked)
  * @param payload - Event-specific data (full prompts, detection results, etc.)
  */
 async function captureCompaction(
   sessionID: string,
   epicID: string,
-  compactionType: "detection_complete" | "prompt_generated" | "context_injected",
+  compactionType: "detection_complete" | "prompt_generated" | "context_injected" | "resumption_started" | "tool_call_tracked",
   payload: any,
 ): Promise<void> {
   try {
-    // Shell out to CLI - no imports needed, version always matches
-    const args = [
-      "capture",
-      "--session", sessionID,
-      "--epic", epicID,
-      "--type", compactionType,
-      "--payload", JSON.stringify(payload),
-    ];
+    // Build the CoordinatorEvent object matching eval-capture.ts schema
+    const event = {
+      session_id: sessionID,
+      epic_id: epicID,
+      timestamp: new Date().toISOString(),
+      event_type: "COMPACTION",
+      compaction_type: compactionType,
+      payload: payload,
+    };
+
+    // Session directory: ~/.config/swarm-tools/sessions/
+    const sessionDir = process.env.SWARM_SESSIONS_DIR || 
+      join(homedir(), ".config", "swarm-tools", "sessions");
     
-    const proc = spawn(SWARM_CLI, args, {
-      env: { ...process.env, SWARM_PROJECT_DIR: projectDirectory },
-      stdio: ["ignore", "ignore", "ignore"], // Fire and forget
+    // Ensure directory exists
+    if (!existsSync(sessionDir)) {
+      mkdirSync(sessionDir, { recursive: true });
+    }
+
+    // Write to JSONL (append mode)
+    const sessionPath = join(sessionDir, `${sessionID}.jsonl`);
+    const line = `${JSON.stringify(event)}\n`;
+    appendFileSync(sessionPath, line, "utf-8");
+
+    logCompaction("debug", "compaction_event_captured", {
+      session_id: sessionID,
+      epic_id: epicID,
+      compaction_type: compactionType,
+      session_path: sessionPath,
     });
-    
-    // Don't wait - capture is non-blocking
-    proc.unref();
   } catch (err) {
     // Non-fatal - capture failures shouldn't break compaction
     logCompaction("warn", "compaction_capture_failed", {
       session_id: sessionID,
+      epic_id: epicID,
       compaction_type: compactionType,
       error: err instanceof Error ? err.message : String(err),
     });
@@ -451,6 +601,14 @@ async function execTool(
         try {
           const result = JSON.parse(stdout);
           if (result.success && result.data !== undefined) {
+            // Log successful tool call
+            logTool(name, args, typeof result.data === "string" ? result.data : JSON.stringify(result.data));
+            
+            // Log Swarm Mail events separately
+            if (name.startsWith("swarmmail_")) {
+              logSwarmMail(`tool_${name}`, { args, result: result.data });
+            }
+            
             // Unwrap the data for cleaner tool output
             resolve(
               typeof result.data === "string"
@@ -463,17 +621,30 @@ async function execTool(
             const errorMsg = typeof result.error === "string" 
               ? result.error 
               : (result.error.message || "Tool execution failed");
+            
+            // Log failed tool call
+            logTool(name, args, undefined, errorMsg);
+            logError(`Tool ${name} failed`, { args, error: errorMsg });
+            
             reject(new Error(errorMsg));
           } else {
+            // Log successful (non-standard response)
+            logTool(name, args, stdout);
             resolve(stdout);
           }
         } catch {
+          // Log successful (unparseable response)
+          logTool(name, args, stdout);
           resolve(stdout);
         }
       } else if (code === 2) {
-        reject(new Error(`Unknown tool: ${name}`));
+        const errorMsg = `Unknown tool: ${name}`;
+        logError(errorMsg, { args });
+        reject(new Error(errorMsg));
       } else if (code === 3) {
-        reject(new Error(`Invalid JSON args: ${stderr}`));
+        const errorMsg = `Invalid JSON args: ${stderr}`;
+        logError(errorMsg, { tool: name, args });
+        reject(new Error(errorMsg));
       } else {
         // Tool returned error
         try {
@@ -483,15 +654,27 @@ async function execTool(
             const errorMsg = typeof result.error === "string"
               ? result.error
               : (result.error.message || `Tool failed with code ${code}`);
+            
+            logTool(name, args, undefined, errorMsg);
+            logError(`Tool ${name} failed with code ${code}`, { args, error: errorMsg });
+            
             reject(new Error(errorMsg));
           } else {
+            const errorMsg = stderr || stdout || `Tool failed with code ${code}`;
+            logTool(name, args, undefined, errorMsg);
+            logError(`Tool ${name} failed with code ${code}`, { args, stderr, stdout });
+            
             reject(
-              new Error(stderr || stdout || `Tool failed with code ${code}`),
+              new Error(errorMsg),
             );
           }
         } catch {
+          const errorMsg = stderr || stdout || `Tool failed with code ${code}`;
+          logTool(name, args, undefined, errorMsg);
+          logError(`Tool ${name} failed with code ${code}`, { args, stderr, stdout });
+          
           reject(
-            new Error(stderr || stdout || `Tool failed with code ${code}`),
+            new Error(errorMsg),
           );
         }
       }
@@ -667,6 +850,42 @@ const beads_link_thread = tool({
     thread_id: tool.schema.string().describe("Agent Mail thread ID"),
   },
   execute: (args, ctx) => execTool("beads_link_thread", args, ctx),
+});
+
+// =============================================================================
+// Session Handoff Tools (Chainlink-inspired)
+// =============================================================================
+
+const hive_session_start = tool({
+  description: `Start a new work session with optional handoff notes from previous session.
+
+Chainlink-inspired session management for context preservation across sessions.
+Returns previous session's handoff notes if available.
+
+Credit: Chainlink session handoff pattern from https://github.com/dollspace-gay/chainlink`,
+  args: {
+    active_cell_id: tool.schema
+      .string()
+      .optional()
+      .describe("ID of cell being worked on"),
+  },
+  execute: (args, ctx) => execTool("hive_session_start", args, ctx),
+});
+
+const hive_session_end = tool({
+  description: `End current session with handoff notes for next session.
+
+Save context for the next agent/session to pick up where you left off.
+Include: what was done, what's next, any blockers or gotchas.
+
+Credit: Chainlink session handoff pattern from https://github.com/dollspace-gay/chainlink`,
+  args: {
+    handoff_notes: tool.schema
+      .string()
+      .optional()
+      .describe("Notes for next session (e.g., 'Completed X. Next: do Y. Watch out for Z.')"),
+  },
+  execute: (args, ctx) => execTool("hive_session_end", args, ctx),
 });
 
 // =============================================================================
@@ -1185,6 +1404,30 @@ const swarm_review_feedback = tool({
 });
 
 // =============================================================================
+// Adversarial Review Tools (VDD/Chainlink-inspired)
+// =============================================================================
+
+const swarm_adversarial_review = tool({
+  description: `VDD-style adversarial code review using hostile, fresh-context agent.
+
+Spawns Sarcasmotron - a hyper-critical reviewer with zero tolerance for slop.
+Fresh context per review prevents "relationship drift" (becoming lenient over time).
+
+Returns structured critique with verdict:
+- APPROVED: Code is solid
+- NEEDS_CHANGES: Real issues found
+- HALLUCINATING: Adversary invented issues (code is excellent!)
+
+Credit: VDD methodology from https://github.com/Vomikron/VDD
+Credit: Chainlink patterns from https://github.com/dollspace-gay/chainlink`,
+  args: {
+    diff: tool.schema.string().describe("Git diff of changes to review"),
+    test_output: tool.schema.string().optional().describe("Test output (optional)"),
+  },
+  execute: (args, ctx) => execTool("swarm_adversarial_review", args, ctx),
+});
+
+// =============================================================================
 // Skills Tools
 // =============================================================================
 
@@ -1399,6 +1642,71 @@ const cass_stats = tool({
   description: "Show index statistics - how many sessions, messages, agents indexed.",
   args: {},
   execute: (args, ctx) => execTool("cass_stats", args, ctx),
+});
+
+// =============================================================================
+// Hivemind Tools (Unified Memory - Sessions + Learnings)
+// =============================================================================
+
+const hivemind_store = tool({
+  description: "Store a memory (learnings, decisions, patterns) with metadata and tags. Include WHY, not just WHAT.",
+  args: {
+    information: tool.schema.string().describe("The learning, decision, or pattern to store (include context and reasoning)"),
+    tags: tool.schema.string().optional().describe("Comma-separated tags for categorization (e.g., 'auth,oauth,tokens')"),
+  },
+  execute: (args, ctx) => execTool("hivemind_store", args, ctx),
+});
+
+const hivemind_find = tool({
+  description: "Search all memories (learnings + sessions) by semantic similarity. Use BEFORE implementing to check if any agent solved it before.",
+  args: {
+    query: tool.schema.string().describe("Search query (e.g., 'token refresh race condition')"),
+    limit: tool.schema.number().optional().describe("Max results to return (default: 5)"),
+    collection: tool.schema.string().optional().describe("Filter by collection: 'default' (learnings), 'claude', 'cursor', etc., or omit for all"),
+  },
+  execute: (args, ctx) => execTool("hivemind_find", args, ctx),
+});
+
+const hivemind_get = tool({
+  description: "Get specific memory by ID",
+  args: {
+    id: tool.schema.string().describe("Memory ID (e.g., 'mem_xyz123')"),
+  },
+  execute: (args, ctx) => execTool("hivemind_get", args, ctx),
+});
+
+const hivemind_remove = tool({
+  description: "Delete outdated/incorrect memory",
+  args: {
+    id: tool.schema.string().describe("Memory ID to remove"),
+  },
+  execute: (args, ctx) => execTool("hivemind_remove", args, ctx),
+});
+
+const hivemind_validate = tool({
+  description: "Confirm memory is still accurate (resets 90-day decay timer)",
+  args: {
+    id: tool.schema.string().describe("Memory ID to validate"),
+  },
+  execute: (args, ctx) => execTool("hivemind_validate", args, ctx),
+});
+
+const hivemind_stats = tool({
+  description: "Memory statistics and health check (documents, chunks, embeddings)",
+  args: {},
+  execute: (args, ctx) => execTool("hivemind_stats", args, ctx),
+});
+
+const hivemind_index = tool({
+  description: "Index AI session directories (automatically indexes ~/.config/opencode/sessions, ~/.cursor-tutor, etc.)",
+  args: {},
+  execute: (args, ctx) => execTool("hivemind_index", args, ctx),
+});
+
+const hivemind_sync = tool({
+  description: "Sync learnings to .hive/memories.jsonl for git-backed team sharing",
+  args: {},
+  execute: (args, ctx) => execTool("hivemind_sync", args, ctx),
 });
 
 // =============================================================================
@@ -2514,6 +2822,9 @@ const SwarmPlugin: Plugin = async (
       hive_cells,
       hive_sync,
       beads_link_thread,
+      // Session Handoff (Chainlink)
+      hive_session_start,
+      hive_session_end,
       // Swarm Mail (Embedded)
       swarmmail_init,
       swarmmail_send,
@@ -2552,6 +2863,8 @@ const SwarmPlugin: Plugin = async (
       // Structured Review
       swarm_review,
       swarm_review_feedback,
+      // Adversarial Review (VDD/Chainlink)
+      swarm_adversarial_review,
       // Skills
       skills_list,
       skills_read,
@@ -2573,6 +2886,15 @@ const SwarmPlugin: Plugin = async (
       cass_health,
       cass_index,
       cass_stats,
+      // Hivemind (Unified Memory - Sessions + Learnings)
+      hivemind_store,
+      hivemind_find,
+      hivemind_get,
+      hivemind_remove,
+      hivemind_validate,
+      hivemind_stats,
+      hivemind_index,
+      hivemind_sync,
     },
 
     // Swarm-aware compaction hook with LLM-powered continuation prompts
@@ -2701,8 +3023,9 @@ const SwarmPlugin: Plugin = async (
           has_projection: !!sessionScan.projection?.isSwarm,
         });
 
-        // Hoist snapshot outside try block so it's available in fallback path
+        // Hoist snapshot and queryDuration outside try block so they're available in fallback path
         let snapshot: SwarmStateSnapshot | undefined;
+        let queryDuration = 0; // 0 if using projection, actual duration if using hive query
         
         try {
           // =======================================================================
@@ -2747,7 +3070,7 @@ const SwarmPlugin: Plugin = async (
             // Fallback to hive query (may be stale)
             const queryStart = Date.now();
             snapshot = await querySwarmState(input.sessionID);
-            const queryDuration = Date.now() - queryStart;
+            queryDuration = Date.now() - queryStart;
             
             logCompaction("info", "fallback_to_hive_query", {
               session_id: input.sessionID,
@@ -2891,6 +3214,16 @@ const SwarmPlugin: Plugin = async (
             error_stack: err instanceof Error ? err.stack : undefined,
             falling_back_to: "static_prompt",
           });
+        }
+
+        // Guard: Don't double-inject if LLM prompt was already set
+        // This can happen if the error occurred after setting output.prompt but before return
+        if ("prompt" in output && output.prompt) {
+          logCompaction("info", "skipping_static_fallback_prompt_already_set", {
+            session_id: input.sessionID,
+            prompt_length: output.prompt.length,
+          });
+          return;
         }
 
         // Level 3: Fall back to static context WITH dynamic state from snapshot
