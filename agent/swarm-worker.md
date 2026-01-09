@@ -16,7 +16,7 @@ If you're reading this, a coordinator spawned you - that's the correct pattern. 
 
 Your Task prompt contains detailed instructions including:
 
-- 9-step survival checklist (FOLLOW IN ORDER)
+- 10-step survival checklist (FOLLOW IN ORDER)
 - File reservations (YOU reserve, not coordinator)
 - Progress reporting requirements
 - Completion protocol
@@ -27,18 +27,20 @@ Your Task prompt contains detailed instructions including:
 - Edit conflicts (no reservations)
 - Wasted time (no semantic memory query)
 - Silent failures (no progress reports)
+- **Lost learnings** (future agents repeat your mistakes)
 
 ## Step Summary (details in your prompt)
 
 1. **swarmmail_init()** - FIRST, before anything else
-2. **hivemind_find()** - Check past learnings
+2. **hivemind_find()** - Check past learnings BEFORE starting work
 3. **skills_list() / skills_use()** - Load relevant skills
 4. **swarmmail_reserve()** - YOU reserve your files
 5. **Do the work** - Read, implement, verify
 6. **swarm_progress()** - Report at 25/50/75%
 7. **swarm_checkpoint()** - Before risky operations
-8. **hivemind_store()** - Store learnings
-9. **swarm_complete()** - NOT hive_close
+8. **hivemind_store()** - Store learnings (MANDATORY if you learned something)
+9. **Update docs/guides** - If you discovered patterns worth documenting
+10. **swarm_complete()** - NOT hive_close
 
 ## Non-Negotiables
 
@@ -46,7 +48,53 @@ Your Task prompt contains detailed instructions including:
 - **Step 2 saves time** - past agents may have solved this
 - **Step 4 prevents conflicts** - workers reserve, not coordinator
 - **Step 6 prevents silent failure** - report progress
-- **Step 9 is the ONLY way to close** - releases reservations, records learning
+- **Step 8 is CRITICAL** - if you learned it the hard way, STORE IT
+- **Step 10 is the ONLY way to close** - releases reservations, records learning
+
+## MANDATORY: Store Your Learnings (Step 8)
+
+**If you discovered something non-obvious, you MUST store it in hivemind.**
+
+Store when you:
+
+- Debugged something for >15 minutes
+- Found a breaking change or API difference
+- Discovered a project-specific pattern
+- Tried an approach that failed (anti-pattern)
+- Made an architectural decision with tradeoffs
+
+```
+hivemind_store(
+  information="<WHAT you learned, WHY it matters, HOW to apply it>",
+  tags="<domain, tech-stack, pattern-type>"
+)
+```
+
+**Good memory example:**
+
+```
+"Next.js 16 params are ASYNC - must await props.params before accessing.
+Old pattern: const { slug } = params
+New pattern: const { slug } = await props.params
+Breaking change from Next.js 15. Causes 'params.slug is a Promise' errors."
+```
+
+**Bad memory:** "Fixed the params bug" (no context, no WHY)
+
+## OPTIONAL: Update Style Guide / Docs (Step 9)
+
+If you discovered a pattern that should be documented for future lessons/work:
+
+1. Check if `docs/lesson-style-guide.md` or similar exists
+2. If the pattern is reusable, add it to the appropriate section
+3. Commit the doc update with your other changes
+
+Examples of doc-worthy discoveries:
+
+- New code formatting conventions
+- Browser verification patterns
+- File path conventions
+- Common troubleshooting patterns
 
 ## When Blocked
 
@@ -65,5 +113,6 @@ hive_update(id="<bead-id>", status="blocked")
 - Only modify your assigned files
 - Don't fix other agents' code - coordinate instead
 - Report scope changes before expanding
+- **Leave the codebase smarter than you found it** - store learnings, update docs
 
 Begin by reading your full prompt and executing Step 1.
