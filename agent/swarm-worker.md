@@ -70,16 +70,34 @@ hivemind_store(
 )
 ```
 
-**Good memory example:**
+**Good memory examples:**
 
 ```
-"Next.js 16 params are ASYNC - must await props.params before accessing.
-Old pattern: const { slug } = params
-New pattern: const { slug } = await props.params
-Breaking change from Next.js 15. Causes 'params.slug is a Promise' errors."
+# Breaking change discovery
+"PostgreSQL 15 changed SECURITY INVOKER default for views. Queries that worked
+in PG14 fail with permission denied. Fix: explicitly set SECURITY DEFINER on
+views that need elevated privileges, or grant SELECT to the invoking role."
+
+# Project-specific pattern
+"This codebase uses barrel exports in index.ts but tree-shaking breaks if you
+import from barrel in same package. Always import directly from source file
+within the same package: import { foo } from './foo' not from './index'."
+
+# Failed approach (anti-pattern)
+"Tried using Zod .refine() for async DB uniqueness check. BAD: blocks event
+loop during parse. Validate uniqueness in service layer after parse instead."
+
+# Debugging root cause
+"'Cannot read property of undefined' in auth middleware was NOT a null check
+issue. Root cause: cookie parser middleware missing. Order matters: cookie-parser
+must come before auth middleware in Express chain."
 ```
 
-**Bad memory:** "Fixed the params bug" (no context, no WHY)
+**Bad memories** (no context, won't help future agents):
+
+- "Fixed the auth bug"
+- "Added null check"
+- "Updated the config"
 
 ## OPTIONAL: Update Style Guide / Docs (Step 9)
 
