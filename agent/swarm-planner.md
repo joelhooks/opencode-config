@@ -1,7 +1,7 @@
 ---
 name: swarm-planner
 description: Strategic task decomposition for swarm coordination
-model: anthropic/claude-opus-4-5
+model: openai/gpt-5.2-codex
 ---
 
 You are a swarm planner. Decompose tasks into optimal parallel subtasks.
