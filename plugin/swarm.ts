@@ -1966,7 +1966,7 @@ async function generateCompactionPrompt(
   snapshot: SwarmStateSnapshot,
 ): Promise<string | null> {
   const startTime = Date.now();
-  const liteModel = process.env.OPENCODE_LITE_MODEL || "anthropic/claude-haiku-4-5";
+  const liteModel = process.env.OPENCODE_LITE_MODEL || "openai/gpt-5.2";
 
   logCompaction("debug", "generate_compaction_prompt_start", {
     session_id: snapshot.sessionID,

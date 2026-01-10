@@ -2,12 +2,9 @@
   "$schema": "https://opencode.ai/config.json",
   
   // === Models ===
-  "model": "anthropic/claude-opus-4-5",
-  "small_model": "anthropic/claude-haiku-4-5",  // title gen, lightweight tasks
+  "model": "openai/gpt-5.2-codex",
+  "small_model": "openai/gpt-5.2",  // title gen, lightweight tasks
   "autoupdate": true,
-  "plugin": [
-    "opencode-anthropic-auth@0.0.7"
-  ],
   // === TUI ===
   "tui": {
     "scroll_acceleration": {
@@ -21,10 +18,6 @@
     "biome": {
       "command": ["npx", "biome", "format", "--write", "$FILE"],
       "extensions": [".js", ".jsx", ".ts", ".tsx", ".json", ".jsonc"]
-    },
-    "prettier": {
-      "command": ["npx", "prettier", "--write", "$FILE"],
-      "extensions": [".js", ".jsx", ".ts", ".tsx", ".json", ".md", ".yaml", ".yml", ".css", ".scss"]
     }
   },
   
@@ -60,10 +53,6 @@
       "type": "local",
       "command": ["npx", "-y", "next-devtools-mcp@latest"]
     },
-    // "agent-mail": {
-    //   "type": "remote",
-    //   "url": "http://127.0.0.1:8765/mcp/"
-    // },
     "chrome-devtools": {
       "type": "local",
       "command": ["npx", "-y", "chrome-devtools-mcp@latest"]
@@ -77,17 +66,6 @@
     "fetch": {
       "type": "local",
       "command": ["uvx", "mcp-server-fetch"]
-    },
-    // Snyk security scanning - deps, code, IaC, containers
-    "snyk": {
-      "type": "local",
-      "command": ["npx", "-y", "snyk@latest", "mcp", "-t", "stdio"]
-    },
-    // Kernel - cloud browser automation, Playwright execution, app deployment
-    // OAuth auth - run `opencode mcp auth kernel` to authenticate
-    "kernel": {
-      "type": "remote",
-      "url": "https://mcp.onkernel.com/mcp"
     }
   },
   
@@ -99,7 +77,7 @@
     },
     // Plan agent - read-only analysis, no file writes
     "plan": {
-      "model": "anthropic/claude-opus-4-5",  // Opus for planning (cheaper)
+      "model": "openai/gpt-5.2-codex",  // Opus for planning (cheaper)
       "temperature": 0.1,
       "tools": {
         "write": false,
@@ -127,7 +105,7 @@
     },
     // Security agent - read-only vulnerability scanning with Snyk
     "security": {
-      "model": "anthropic/claude-sonnet-4-5",
+      "model": "openai/gpt-5.2-codex",
       "temperature": 0.1,  // Low temp for deterministic security analysis
       "tools": {
         "write": false,
@@ -138,7 +116,7 @@
     },
     // Test writer agent - generates comprehensive test suites
     "test-writer": {
-      "model": "anthropic/claude-sonnet-4-5",
+      "model": "openai/gpt-5.2-codex",
       "temperature": 0.2,  // Slight creativity for test case generation
       "permission": {
         "write": {
@@ -153,7 +131,7 @@
     },
     // Docs agent - documentation writer (cheaper model)
     "docs": {
-      "model": "anthropic/claude-haiku-4-5",  // Haiku for cost-effective docs
+      "model": "openai/gpt-5.2-codex",  // Haiku for cost-effective docs
       "temperature": 0.3,  // More creativity for readable documentation
       "permission": {
         "write": {

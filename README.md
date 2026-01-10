@@ -30,6 +30,13 @@ Built on [`joelhooks/swarmtools`](https://github.com/joelhooks/swarmtools) - mul
 
 ## Quick Start
 
+### 0. Install OpenCode
+
+Install OpenCode via the official install script or the Homebrew tap.
+
+- Install script: `curl -fsSL https://opencode.ai/install | bash`
+- Homebrew: `brew install anomalyco/tap/opencode`
+
 ### 1. Clone & Install
 
 ```bash
@@ -64,7 +71,11 @@ cass --version  # 0.1.35+
 swarm doctor
 ```
 
-### 4. Run Your First Swarm
+### 4. Initialize Repo (AGENTS.md)
+
+Inside OpenCode, run `/init` in the repo you want to work on. This generates an `AGENTS.md` file with workflow rules—commit it so collaborators and agents share the same guardrails.
+
+### 5. Run Your First Swarm
 
 > [!WARNING]
 > All commands run **inside [OpenCode](https://opencode.ai)**, not in your terminal. The `swarm` CLI is a backend that agents call - it's not meant for direct human use.
@@ -80,6 +91,17 @@ Watch it decompose → spawn workers → coordinate → verify → learn.
 The agent orchestrates everything. You just describe what you want.
 
 ---
+
+## Configuration & Permissions
+
+OpenCode merges configuration from multiple sources with defined precedence. Higher-precedence sources override earlier ones, so keep defaults in shared configs and project-specific overrides close to the repo.
+
+Permissions support `allow`, `ask`, and `deny` rules. When multiple rules match, the last match wins. Reads from `.env` files are denied by default, so add explicit allowances when you need them.
+
+## Workflow Notes
+
+- Use the Plan agent to outline multi-step work before running a swarm.
+- Formatters run automatically after edits when the project has a formatter config and dependencies installed.
 
 ## Version Reference
 
@@ -290,6 +312,8 @@ hivemind_find(query="token refresh", expand=true)  # Full content
 ---
 
 ## MCP Servers
+
+OpenCode manages MCP servers from config and starts them on demand. Keep server definitions in `opencode.jsonc` so agents can discover tools without manual bootstrapping.
 
 | Server              | Purpose                                                |
 | ------------------- | ------------------------------------------------------ |
