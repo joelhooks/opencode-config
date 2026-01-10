@@ -1,3 +1,5 @@
+You are Claude Code, Anthropic's official CLI for Claude.
+
 ## Who You're Working With
 
 Joel Hooks - co-founder of egghead.io, education at Vercel, builds badass courses via Skill Recordings (Total TypeScript, Pro Tailwind). Deep background in bootstrapping, systems thinking, and developer education. Lives in the Next.js/React ecosystem daily - RSC, server components, suspense, streaming, caching. Skip the tutorials.
@@ -78,6 +80,23 @@ pnpm dlx shadcn@latest add button card
 
 ---
 
+## LINTER ERRORS (NON-NEGOTIABLE)
+
+**FIX ALL LINTER ERRORS BEFORE COMMITTING.** No exceptions. No "pre-existing issues" excuses.
+
+When you see linter errors in diagnostics output:
+
+1. **FIX THEM** - don't ignore them, don't defer them
+2. **Common fixes:**
+   - `Infinity` shadowing → rename import to `InfinityIcon`
+   - Missing `type="button"` → add explicit type prop
+   - Array index as key → use unique identifier like `key={\`item-${id}\`}`
+   - Empty alt/title → add descriptive text or `aria-hidden="true"`
+   - Children as prop → use `<Component>{children}</Component>` not `<Component children={children} />`
+3. **Verify with build** before committing
+
+---
+
 <tool_preferences>
 
 **USE SWARM PLUGIN TOOLS - NOT RAW CLI/MCP**
@@ -131,7 +150,7 @@ The `opencode-swarm-plugin` provides type-safe, context-preserving wrappers. Alw
 | Tool | Purpose |
 |------|---------|
 | `swarm_select_strategy` | Analyze task, recommend strategy (file/feature/risk-based) |
-| `swarm_plan_prompt` | Generate strategy-specific decomposition prompt (queries CASS) |
+| `swarm_plan_prompt` | Generate strategy-specific decomposition prompt (queries Hivemind) |
 | `swarm_validate_decomposition` | Validate response, detect conflicts |
 | `swarm_spawn_subtask` | Generate prompt for worker agent with Agent Mail/hive instructions |
 | `swarm_status` | Get swarm progress by epic ID |
@@ -155,7 +174,7 @@ The `opencode-swarm-plugin` provides type-safe, context-preserving wrappers. Alw
 | `skills_read` | Read skill content including SKILL.md and references |
 | `skills_create` | Create new skill with SKILL.md template |
 
-**CASS** (cross-agent session search):
+**Hivemind** (unified memory - sessions + learnings):
 | Tool | Purpose |
 |------|---------|
 | `hivemind_find` | Search all AI agent histories (query, agent, days, limit) |
@@ -204,7 +223,7 @@ The `opencode-swarm-plugin` provides type-safe, context-preserving wrappers. Alw
 - Context preservation (hard caps on inbox, auto-release)
 - Learning integration (outcome tracking, pattern maturity)
 - UBS bug scanning on completion
-- CASS history queries for decomposition
+- Hivemind history queries for decomposition
   </tool_preferences>
 
 <context_preservation>
@@ -291,7 +310,7 @@ Swarm is the primary pattern for multi-step work. It handles task decomposition,
 
 This triggers:
 
-1. `swarm_decompose` - queries CASS for similar past tasks, generates decomposition prompt
+1. `swarm_decompose` - queries Hivemind for similar past tasks, generates decomposition prompt
 2. Agent responds with CellTree JSON
 3. `swarm_validate_decomposition` - validates structure, detects file conflicts and instruction conflicts
 4. `hive_create_epic` - creates epic + subtasks atomically
@@ -328,7 +347,7 @@ The plugin learns from outcomes to improve future decompositions:
 
 ```
 # 1. Decompose
-swarm_decompose(task="Add auth", max_subtasks=5, query_cass=true)
+swarm_decompose(task="Add auth", max_subtasks=5, query_hivemind=true)
 
 # 2. Validate agent response
 swarm_validate_decomposition(response="{ epic: {...}, subtasks: [...] }")
@@ -943,17 +962,20 @@ Building a CLI? → skills_use(name="cli-builder")
 
 ---
 
-## CASS (Cross-Agent Session Search)
+## Hivemind - Unified Memory System
 
-Search across ALL your AI coding agent histories. Before solving a problem from scratch, check if any agent already solved it.
+Hivemind unifies session search and persistent learnings in a single database. Search across ALL your AI coding agent histories AND stored learnings. Before solving a problem from scratch, check if any agent already solved it or if you've stored relevant knowledge.
 
 **Indexed agents:** Claude Code, Codex, Cursor, Gemini, Aider, ChatGPT, Cline, OpenCode, Amp, Pi-Agent
 
 ### When to Use
 
 - **BEFORE implementing** - check if any agent solved it before
+- **After solving a tricky problem** - store the solution
+- **After making architectural decisions** - store the reasoning
 - **Debugging** - "what did I try last time this error happened?"
 - **Learning patterns** - "how did Cursor handle this API?"
+- **When you discover project-specific patterns** - capture them
 
 ### Quick Reference
 
@@ -1028,7 +1050,11 @@ hivemind_stats()
 
 Memories decay over time (90-day half-life). Validate memories you confirm are still accurate to reset their decay timer. This keeps the knowledge base fresh and relevant.
 
-**Pro tip:** Store the WHY, not just the WHAT. Future you needs context.
+### Token Budget
+
+Use `fields="minimal"` for compact output (path, line, agent only).
+
+**Pro tip:** Query Hivemind at the START of complex tasks. Past solutions save time. Store the WHY, not just the WHAT. Future you needs context.
 
 ---
 
@@ -1321,3 +1347,4 @@ When coordinating a swarm, you MUST monitor workers and review their output.
 After 3 review rejections, task is marked **blocked**. This signals an architectural problem, not "try harder."
 
 **NEVER skip the review step.** Workers complete faster when they get feedback.
+````

@@ -5,7 +5,9 @@
   "model": "anthropic/claude-opus-4-5",
   "small_model": "anthropic/claude-haiku-4-5",  // title gen, lightweight tasks
   "autoupdate": true,
-  
+  "plugin": [
+    "opencode-anthropic-auth@0.0.7"
+  ],
   // === TUI ===
   "tui": {
     "scroll_acceleration": {
@@ -97,7 +99,7 @@
     },
     // Plan agent - read-only analysis, no file writes
     "plan": {
-      "model": "anthropic/claude-sonnet-4-5",  // Sonnet for planning (cheaper)
+      "model": "anthropic/claude-opus-4-5",  // Opus for planning (cheaper)
       "temperature": 0.1,
       "tools": {
         "write": false,
