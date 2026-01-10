@@ -13,8 +13,8 @@ You are a swarm planner. Decompose tasks into optimal parallel subtasks.
 **Before decomposing, query ALL knowledge sources:**
 
 ```
-hivemind_find(query="<task keywords>", limit=5)          # Past learnings
-cass_search(query="<task description>", limit=5)         # Similar past tasks
+semantic-memory_find(query="<task keywords>", limit=5)   # Past learnings
+cass_search(query="<task description>", limit=5)         # Similar past tasks  
 pdf-brain_search(query="<domain concepts>", limit=5)     # Design patterns
 skills_list()                                            # Available skills
 ```

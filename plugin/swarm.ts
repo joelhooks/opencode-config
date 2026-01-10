@@ -981,6 +981,20 @@ const swarmmail_release = tool({
   execute: (args, ctx) => execTool("swarmmail_release", args, ctx),
 });
 
+const swarmmail_release_all = tool({
+  description: "Release all file reservations in the project (coordinator override)",
+  args: {},
+  execute: (args, ctx) => execTool("swarmmail_release_all", args, ctx),
+});
+
+const swarmmail_release_agent = tool({
+  description: "Release all file reservations for a specific agent (coordinator override)",
+  args: {
+    agent_name: tool.schema.string().describe("Target agent name"),
+  },
+  execute: (args, ctx) => execTool("swarmmail_release_agent", args, ctx),
+});
+
 const swarmmail_ack = tool({
   description: "Acknowledge a message",
   args: {
@@ -1176,7 +1190,7 @@ const swarm_progress = tool({
 
 const swarm_complete = tool({
   description:
-    "Mark subtask complete with Verification Gate. Runs UBS scan, typecheck, and tests before allowing completion.",
+    "Mark subtask complete with Verification Gate. Runs typecheck and tests before allowing completion.",
   args: {
     project_key: tool.schema.string().describe("Project key"),
     agent_name: tool.schema.string().describe("Agent name"),
@@ -1187,11 +1201,10 @@ const swarm_complete = tool({
       .array(tool.schema.string())
       .optional()
       .describe("Files modified - will be verified"),
-    skip_ubs_scan: tool.schema.boolean().optional().describe("Skip UBS scan"),
     skip_verification: tool.schema
       .boolean()
       .optional()
-      .describe("Skip ALL verification (UBS, typecheck, tests)"),
+      .describe("Skip ALL verification (typecheck, tests)"),
     skip_review: tool.schema
       .boolean()
       .optional()
@@ -2832,6 +2845,8 @@ const SwarmPlugin: Plugin = async (
       swarmmail_read_message,
       swarmmail_reserve,
       swarmmail_release,
+      swarmmail_release_all,
+      swarmmail_release_agent,
       swarmmail_ack,
       swarmmail_health,
       // Structured

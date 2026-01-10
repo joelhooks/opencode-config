@@ -10,7 +10,7 @@ $ARGUMENTS
 
 ## CRITICAL: Coordinator Role Boundaries
 
-**⚠️ COORDINATORS NEVER EXECUTE WORK DIRECTLY**
+**â ï¸ COORDINATORS NEVER EXECUTE WORK DIRECTLY**
 
 Your role is **ONLY** to:
 1. **Clarify** - Ask questions to understand scope
@@ -109,7 +109,7 @@ Task(subagent_type="swarm-worker", prompt="<from above>")
 
 ## CRITICAL: NEVER Fetch Documentation Directly
 
-**⚠️ COORDINATORS DO NOT CALL RESEARCH TOOLS DIRECTLY**
+**â ï¸ COORDINATORS DO NOT CALL RESEARCH TOOLS DIRECTLY**
 
 The following tools are **FORBIDDEN** for coordinators to call:
 
@@ -133,9 +133,9 @@ The following tools are **FORBIDDEN** for coordinators to call:
 **Before decomposing, clarify the task with the user.**
 
 Check for flags in the task:
-- `--fast` → Skip questions, use reasonable defaults
-- `--auto` → Zero interaction, heuristic decisions
-- `--confirm-only` → Show plan, get yes/no only
+- `--fast` â Skip questions, use reasonable defaults
+- `--auto` â Zero interaction, heuristic decisions
+- `--confirm-only` â Show plan, get yes/no only
 
 **Default (no flags): Full Socratic Mode**
 
@@ -174,7 +174,7 @@ Check for flags in the task:
 
 ### Phase 1.5: Research Phase (FOR COMPLEX TASKS)
 
-**⚠️ If the task requires understanding unfamiliar technologies, APIs, or libraries, spawn a researcher FIRST.**
+**â ï¸ If the task requires understanding unfamiliar technologies, APIs, or libraries, spawn a researcher FIRST.**
 
 **DO NOT call documentation tools directly.** Instead:
 
@@ -233,12 +233,12 @@ swarm_validate_decomposition(response="<CellTree JSON>")
 
 ### Phase 5: DO NOT Reserve Files
 
-> **⚠️ Coordinator NEVER reserves files.** Workers reserve their own files.
+> **â ï¸ Coordinator NEVER reserves files.** Workers reserve their own files.
 > If coordinator reserves, workers get blocked and swarm stalls.
 
 ### Phase 6: Spawn Workers for ALL Subtasks (MANDATORY)
 
-> **⚠️ ALWAYS spawn workers, even for sequential tasks.**
+> **â ï¸ ALWAYS spawn workers, even for sequential tasks.**
 > - Parallel tasks: Spawn ALL in a single message
 > - Sequential tasks: Spawn one, wait for completion, spawn next
 
@@ -268,7 +268,7 @@ const result2 = await Task(subagent_type="swarm-worker", prompt="<from above>")
 
 ### Phase 7: MANDATORY Review Loop (NON-NEGOTIABLE)
 
-**⚠️ AFTER EVERY Task() RETURNS, YOU MUST:**
+**â ï¸ AFTER EVERY Task() RETURNS, YOU MUST:**
 
 1. **CHECK INBOX** - Worker may have sent messages
    `swarmmail_inbox()`
@@ -303,10 +303,10 @@ const result2 = await Task(subagent_type="swarm-worker", prompt="<from above>")
 **DO NOT skip this. DO NOT batch reviews. Review EACH worker IMMEDIATELY after return.**
 
 **Intervene if:**
-- Worker blocked >5min → unblock or reassign
-- File conflicts → mediate between workers
-- Scope creep → approve or reject expansion
-- Review fails 3x → mark task blocked, escalate to human
+- Worker blocked >5min â unblock or reassign
+- File conflicts â mediate between workers
+- Scope creep â approve or reject expansion
+- Review fails 3x â mark task blocked, escalate to human
 
 ### Phase 8: Complete
 ```

@@ -1,7 +1,7 @@
 ---
 description: Fast codebase exploration - read-only, no modifications. Optimized for quick searches and pattern discovery.
 mode: subagent
-model: anthropic/claude-haiku-4-5
+model: openai/gpt-5.2-codex
 temperature: 0.1
 tools:
   bash: true

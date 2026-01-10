@@ -197,6 +197,8 @@ The `opencode-swarm-plugin` provides type-safe, context-preserving wrappers. Alw
 
 ### Other Custom Tools
 
+- **cass_search, cass_view, cass_expand** - Search past agent sessions (use `hivemind_find` instead for unified interface)
+
 - **swarm_review, swarm_review_feedback** - Coordinator reviews worker output (3-strike rule)
 
 - **typecheck** - TypeScript check with grouped errors
@@ -206,10 +208,33 @@ The `opencode-swarm-plugin` provides type-safe, context-preserving wrappers. Alw
 - **repo-crawl\_\*** - GitHub API repo exploration
 - **repo-autopsy\_\*** - Clone & deep analyze repos locally
 - **pdf-brain\_\*** - PDF & Markdown knowledge base (supports URLs, `--expand` for context)
+- **ubs\_\*** - Multi-language bug scanner
+
+### DEPRECATED - Do Not Use Directly
+
+- ~~`bd` CLI commands~~ → Use `hive_*` plugin tools
+- ~~`bd-quick_*` tools~~ → Use `hive_*` plugin tools
+- ~~`beads_*` tools~~ → Use `hive_*` plugin tools (aliases deprecated)
+- ~~Agent Mail MCP tools~~ → Use `agentmail_*` plugin tools
+
+**Why?** Plugin tools have:
+
+- Type-safe Zod validation
+- Context preservation (hard caps on inbox, auto-release)
+- Learning integration (outcome tracking, pattern maturity)
+- UBS bug scanning on completion
+- Hivemind history queries for decomposition
   </tool_preferences>
 
 <context_preservation>
 **CRITICAL: These rules prevent context exhaustion. Violating them burns tokens and kills sessions.**
+
+### Agent Mail - MANDATORY constraints
+
+- **PREFER** `agentmail_inbox` plugin tool - enforces limit=5 and include_bodies=false automatically (plugin guardrails)
+- **ALWAYS** use `agentmail_summarize_thread` instead of fetching all messages in a thread
+- **ALWAYS** use `agentmail_read_message` for individual message bodies when needed
+- If using MCP tools directly: `include_bodies: false`, `inbox_limit: 5` max, `summarize_thread` over fetch all
 
 ### Documentation Tools (context7, effect-docs) - MANDATORY constraints
 
@@ -409,7 +434,43 @@ git status   # MUST show "up to date with origin"
 hive_ready()
 ```
 
+## Agent Mail (via Plugin)
 
+<agent*mail_context>
+Agent Mail coordinates multiple agents working the same repo. \*\*Always use `agentmail*\*` plugin tools\*\* - they enforce context-safe limits (max 5 messages, no bodies by default).
+</agent_mail_context>
+
+### When to Use
+
+- Multiple agents working same codebase
+- Need to reserve files before editing
+- Async communication between agents
+
+### Workflow
+
+```
+# 1. Initialize (once per session)
+agentmail_init(project_path="/abs/path/to/repo", task_description="Working on X")
+# Returns: { agent_name: "BlueLake", project_key: "..." }
+
+# 2. Reserve files before editing
+agentmail_reserve(paths=["src/auth/**"], reason="bd-123: Auth refactor", ttl_seconds=3600)
+
+# 3. Check inbox (headers only, max 5)
+agentmail_inbox()
+
+# 4. Read specific message if needed
+agentmail_read_message(message_id=123)
+
+# 5. Summarize thread (PREFERRED over fetching all)
+agentmail_summarize_thread(thread_id="bd-123")
+
+# 6. Send message
+agentmail_send(to=["OtherAgent"], subject="Status", body="Done with auth", thread_id="bd-123")
+
+# 7. Release when done (or let swarm_complete handle it)
+agentmail_release()
+```
 
 ### Integration with Hive
 
