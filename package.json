@@ -3,7 +3,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@opencode-ai/plugin": "0.0.0-dev-202601101858"
+    "@opencode-ai/plugin": "1.1.36"
   },
   "devDependencies": {
     "@types/node": "^20.19.26",
