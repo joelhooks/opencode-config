@@ -1,3 +1,6 @@
+# Skills (sensitive - team IDs, emails, etc.)
+skill/
+
 # Beads/Hive local files
 .beads/beads.db
 .beads/beads.db-shm
