@@ -217,6 +217,35 @@ See: `/Users/joel/.config/opencode/skill/linear/SKILL.md`
 - **Page ID:** `2a7e06b059c480fcb93fc104a024e003`
 - **URL:** https://www.notion.so/vercel/DX-Weekly-Team-Updates-2a7e06b059c480fcb93fc104a024e003
 
+### CRITICAL: Notion Structure Rules
+
+**MANDATE: Write to EXISTING blocks, don't create new ones.**
+
+The page structure is:
+```
+▶ [Date] (e.g., January 26)
+  ▶ Docs
+  ▶ Community  
+  ▶ Academy    ← FIND THIS EXISTING BLOCK
+```
+
+**Publishing workflow:**
+1. Fetch the page to find the target date section
+2. Find the EXISTING Academy block nested under that date
+3. Write content TO that existing block
+4. Do NOT create a new Academy block at the wrong level
+
+**If you create a new block instead of writing to the existing one, it will appear at the wrong nesting level and need manual cleanup.**
+
+```
+# WRONG - creates orphan block
+notion_create_block(parent_id="<page-id>", content="Academy...")
+
+# RIGHT - find existing Academy block first, then update it
+notion_fetch(id="<page-id>")  # Find Academy block ID under target date
+notion_update_block(id="<existing-academy-block-id>", content="...")
+```
+
 ## Example Usage
 
 ```
